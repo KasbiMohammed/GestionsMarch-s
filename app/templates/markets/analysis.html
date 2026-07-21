@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Analyse PMMP - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Analyse Automatique PMMP</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Analyser un Marché depuis le Portail PMMP</h5>
+            </div>
+            <div class="card-body">
+                <form id="analysisForm">
+                    <div class="mb-3">
+                        <label for="marketUrl" class="form-label">URL du marché sur le portail PMMP</label>
+                        <input type="url" class="form-control" id="marketUrl" placeholder="https://www.marchespublics.gov.ma/..." required>
+                        <div class="form-text">Collez l'URL complète du marché que vous souhaitez analyser</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="analysisMethod" class="form-label">Méthode de calcul du prix de référence</label>
+                        <select class="form-select" id="analysisMethod">
+                            <option value="median">Médiane</option>
+                            <option value="mean">Moyenne</option>
+                            <option value="trimmed_mean">Moyenne tronquée</option>
+                            <option value="iqr">Écart interquartile (IQR)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-graph-up"></i> Analyser le marché
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Résultats de l'analyse -->
+        <div id="analysisResults" class="d-none">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Informations du Marché</h5>
+                </div>
+                <div class="card-body">
+                    <div id="marketInfo"></div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Statistiques des Offres</h5>
+                </div>
+                <div class="card-body">
+                    <div id="statisticsInfo"></div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Prix de Référence</h5>
+                </div>
+                <div class="card-body">
+                    <div id="referencePriceInfo"></div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Offres Anormales</h5>
+                </div>
+                <div class="card-body">
+                    <div id="abnormalOffersInfo"></div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Classement des Entreprises</h5>
+                </div>
+                <div class="card-body">
+                    <div id="rankingInfo"></div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Recommandations</h5>
+                </div>
+                <div class="card-body">
+                    <div id="recommendationsInfo"></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" onclick="importMarket()">
+                            <i class="bi bi-download"></i> Importer dans la base
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="resetAnalysis()">
+                            <i class="bi bi-x-circle"></i> Nouvelle analyse
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Guide d'utilisation</h5>
+            </div>
+            <div class="card-body">
+                <h6>Comment utiliser l'analyse PMMP ?</h6>
+                <ol>
+                    <li>Allez sur le <a href="https://www.marchespublics.gov.ma" target="_blank">portail des marchés publics</a></li>
+                    <li>Recherchez le marché que vous souhaitez analyser</li>
+                    <li>Copiez l'URL complète de la page du marché</li>
+                    <li>Collez l'URL dans le champ ci-dessus</li>
+                    <li>Choisissez la méthode de calcul du prix de référence</li>
+                    <li>Cliquez sur "Analyser le marché"</li>
+                </ol>
+                
+                <hr>
+                
+                <h6>Méthodes de calcul</h6>
+                <ul>
+                    <li><strong>Médiane:</strong> Valeur centrale des offres</li>
+                    <li><strong>Moyenne:</strong> Moyenne arithmétique des offres</li>
+                    <li><strong>Moyenne tronquée:</strong> Moyenne après suppression des valeurs extrêmes</li>
+                    <li><strong>IQR:</strong> Basé sur l'écart interquartile</li>
+                </ul>
+                
+                <hr>
+                
+                <h6>Détection d'anomalies</h6>
+                <p>L'application détecte automatiquement les offres anormalement basses ou élevées selon la méthode IQR (écart interquartile).</p>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Statistiques</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h3 id="totalAnalyzed">0</h3>
+                    <p class="text-muted">Marchés analysés aujourd'hui</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentAnalysisData = null;
+
+document.getElementById('analysisForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const url = document.getElementById('marketUrl').value;
+    const method = document.getElementById('analysisMethod').value;
+    const button = this.querySelector('button[type="submit"]');
+    const originalText = button.innerHTML;
+    
+    showLoading(button);
+    
+    try {
+        const response = await fetch('/api/analysis/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, method })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            currentAnalysisData = data;
+            displayAnalysisResults(data);
+            showNotification('Analyse terminée avec succès', 'success');
+        } else {
+            showNotification(data.detail || 'Erreur lors de l\'analyse', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de l\'analyse du marché', 'danger');
+    } finally {
+        hideLoading(button, originalText);
+    }
+});
+
+function displayAnalysisResults(data) {
+    document.getElementById('analysisResults').classList.remove('d-none');
+    
+    // Informations du marché
+    let marketHtml = '<div class="row">';
+    marketHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Numéro</label><p class="mb-0"><strong>${data.market_data.market_number || 'N/A'}</strong></p></div>`;
+    marketHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Objet</label><p class="mb-0">${data.market_data.object || 'N/A'}</p></div>`;
+    marketHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Maître d'ouvrage</label><p class="mb-0">${data.market_data.master_of_work || 'N/A'}</p></div>`;
+    marketHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Type</label><p class="mb-0">${data.market_data.market_type || 'N/A'}</p></div>`;
+    marketHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Montant estimé</label><p class="mb-0"><strong>${data.market_data.estimated_amount ? formatAmount(data.market_data.estimated_amount) : 'N/A'}</strong></p></div>`;
+    marketHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Entreprises participantes</label><p class="mb-0"><strong>${data.market_data.companies?.length || 0}</strong></p></div>`;
+    marketHtml += '</div>';
+    document.getElementById('marketInfo').innerHTML = marketHtml;
+    
+    // Statistiques
+    const stats = data.analysis_results.statistics;
+    let statsHtml = '<div class="row">';
+    statsHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Médiane</label><p class="mb-0"><strong>${stats.median ? formatAmount(stats.median) : 'N/A'}</strong></p></div>`;
+    statsHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Moyenne</label><p class="mb-0"><strong>${stats.mean ? formatAmount(stats.mean) : 'N/A'}</strong></p></div>`;
+    statsHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Moyenne tronquée</label><p class="mb-0"><strong>${stats.trimmed_mean ? formatAmount(stats.trimmed_mean) : 'N/A'}</strong></p></div>`;
+    statsHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Minimum</label><p class="mb-0"><strong>${stats.min ? formatAmount(stats.min) : 'N/A'}</strong></p></div>`;
+    statsHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Maximum</label><p class="mb-0"><strong>${stats.max ? formatAmount(stats.max) : 'N/A'}</strong></p></div>`;
+    statsHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Écart-type</label><p class="mb-0"><strong>${stats.std_dev ? formatAmount(stats.std_dev) : 'N/A'}</strong></p></div>`;
+    statsHtml += '</div>';
+    document.getElementById('statisticsInfo').innerHTML = statsHtml;
+    
+    // Prix de référence
+    const refPrices = data.analysis_results.reference_prices;
+    let refHtml = '<div class="row">';
+    refHtml += `<div class="col-md-6 mb-300"><label class="text-muted small">Médiane</label><p class="mb-0"><strong>${refPrices.median ? formatAmount(refPrices.median) : 'N/A'}</strong></p></div>`;
+    refHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Moyenne</label><p class="mb-0"><strong>${refPrices.mean ? formatAmount(refPrices.mean) : 'N/A'}</strong></p></div>`;
+    refHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">Moyenne tronquée</label><p class="mb-0"><strong>${refPrices.trimmed_mean ? formatAmount(refPrices.trimmed_mean) : 'N/A'}</strong></p></div>`;
+    refHtml += `<div class="col-md-6 mb-3"><label class="text-muted small">IQR</label><p class="mb-0"><strong>${refPrices.iqr ? formatAmount(refPrices.iqr) : 'N/A'}</strong></p></div>`;
+    refHtml += '</div>';
+    document.getElementById('referencePriceInfo').innerHTML = refHtml;
+    
+    // Offres anormales
+    const abnormal = data.analysis_results.abnormal_offers.iqr_method;
+    let abnormalHtml = '';
+    
+    if (abnormal.low.length > 0) {
+        abnormalHtml += '<h6 class="text-danger">Offres anormalement basses</h6>';
+        abnormalHtml += '<ul class="list-group mb-3">';
+        abnormal.low.forEach(offer => {
+            abnormalHtml += `<li class="list-group-item"><strong>${offer.company}</strong> - ${formatAmount(offer.amount)} (${offer.deviation.toFixed(1)}% en dessous)</li>`;
+        });
+        abnormalHtml += '</ul>';
+    }
+    
+    if (abnormal.high.length > 0) {
+        abnormalHtml += '<h6 class="text-warning">Offres anormalement élevées</h6>';
+        abnormalHtml += '<ul class="list-group">';
+        abnormal.high.forEach(offer => {
+            abnormalHtml += `<li class="list-group-item"><strong>${offer.company}</strong> - ${formatAmount(offer.amount)} (${offer.deviation.toFixed(1)}% au-dessus)</li>`;
+        });
+        abnormalHtml += '</ul>';
+    }
+    
+    if (abnormal.low.length === 0 && abnormal.high.length === 0) {
+        abnormalHtml = '<p class="text-success"><i class="bi bi-check-circle"></i> Aucune offre anormale détectée</p>';
+    }
+    
+    document.getElementById('abnormalOffersInfo').innerHTML = abnormalHtml;
+    
+    // Classement
+    const ranking = data.analysis_results.ranking;
+    let rankingHtml = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Rang</th><th>Entreprise</th><th>Montant</th><th>Différence</th></tr></thead><tbody>';
+    
+    ranking.forEach((item, index) => {
+        const diffClass = item.difference_from_median < 0 ? 'text-success' : (item.difference_from_median > 0 ? 'text-danger' : 'text-muted');
+        rankingHtml += `<tr><td>${item.rank}</td><td><strong>${item.company}</strong></td><td>${formatAmount(item.amount)}</td><td class="${diffClass}">${item.difference_from_median >= 0 ? '+' : ''}${formatAmount(item.difference_from_median)}</td></tr>`;
+    });
+    
+    rankingHtml += '</tbody></table></div>';
+    document.getElementById('rankingInfo').innerHTML = rankingHtml;
+    
+    // Recommandations
+    let recHtml = '<div class="list-group">';
+    
+    data.recommendations.forEach(rec => {
+        const badgeClass = rec.type === 'success' ? 'bg-success' : (rec.type === 'warning' ? 'bg-warning' : 'bg-info');
+        recHtml += `<div class="list-group-item"><span class="badge ${badgeClass}">${rec.type}</span> ${rec.message}</div>`;
+    });
+    
+    recHtml += '</div>';
+    document.getElementById('recommendationsInfo').innerHTML = recHtml;
+}
+
+async function importMarket() {
+    if (!currentAnalysisData) {
+        showNotification('Aucune donnée à importer', 'warning');
+        return;
+    }
+    
+    const url = document.getElementById('marketUrl').value;
+    
+    try {
+        const response = await fetch('/api/analysis/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        
+        if (response.ok) {
+            showNotification('Marché importé avec succès', 'success');
+            setTimeout(() => {
+                window.location.href = '/markets';
+            }, 1000);
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de l\'import', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de l\'import du marché', 'danger');
+    }
+}
+
+function resetAnalysis() {
+    document.getElementById('analysisResults').classList.add('d-none');
+    document.getElementById('analysisForm').reset();
+    currentAnalysisData = null;
+}
+</script>
+{% endblock %}

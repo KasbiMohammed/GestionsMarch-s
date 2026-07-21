@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Rapport Mensuel - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> Rapport Mensuel</h2>
+    <div>
+        <button class="btn btn-success" onclick="exportPDF()">
+            <i class="bi bi-file-earmark-pdf"></i> Exporter PDF
+        </button>
+        <button class="btn btn-primary" onclick="exportExcel()">
+            <i class="bi bi-file-earmark-excel"></i> Exporter Excel
+        </button>
+        <button class="btn btn-info" onclick="exportWord()">
+            <i class="bi bi-file-earmark-word"></i> Exporter Word
+        </button>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <label for="month" class="form-label">Mois</label>
+                <select class="form-select" id="month">
+                    <option value="1">Janvier</option>
+                    <option value="2">Février</option>
+                    <option value="3">Mars</option>
+                    <option value="4">Avril</option>
+                    <option value="5">Mai</option>
+                    <option value="6">Juin</option>
+                    <option value="7">Juillet</option>
+                    <option value="8">Août</option>
+                    <option value="9">Septembre</option>
+                    <option value="10">Octobre</option>
+                    <option value="11">Novembre</option>
+                    <option value="12">Décembre</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="year" class="form-label">Année</label>
+                <select class="form-select" id="year">
+                    <option value="2024">2024</option>
+                    <option value="2023">2023</option>
+                    <option value="2022">2022</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-primary w-100" onclick="generateReport()">
+                    <i class="bi bi-filter"></i> Générer le rapport
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques globales -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Marchés créés</div>
+                <div class="stat-value" id="createdCount">0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <div class="stat-label">Marchés terminés</div>
+                <div class="stat-value" id="completedCount">0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="stat-label">En cours</div>
+                <div class="stat-value" id="inProgressCount">0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card danger">
+            <div class="card-body">
+                <div class="stat-label">En retard</div>
+                <div class="stat-value" id="lateCount">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Budget -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="stat-label">Budget total</div>
+                <div class="stat-value" id="totalBudget">0 MAD</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Budget engagé</div>
+                <div class="stat-value" id="engagedBudget">0 MAD</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Évolution mensuelle</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="evolutionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Répartition par type</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau des marchés -->
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0">Détail des marchés</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="marketsTable">
+                <thead>
+                    <tr>
+                        <th>Numéro</th>
+                        <th>Objet</th>
+                        <th>Type</th>
+                        <th>Budget</th>
+                        <th>Statut</th>
+                        <th>Date de début</th>
+                        <th>Progression</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Les données seront chargées via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let evolutionChart = null;
+let typeChart = null;
+
+async function generateReport() {
+    const month = document.getElementById('month').value;
+    const year = document.getElementById('year').value;
+    
+    try {
+        const response = await fetch(`/api/dashboard/monthly?month=${month}&year=${year}`);
+        const data = await response.json();
+        
+        // Mettre à jour les statistiques
+        document.getElementById('createdCount').textContent = data.created_count;
+        document.getElementById('completedCount').textContent = data.completed_count;
+        document.getElementById('inProgressCount').textContent = data.in_progress_count;
+        document.getElementById('lateCount').textContent = data.late_count;
+        document.getElementById('totalBudget').textContent = formatAmount(data.total_budget);
+        document.getElementById('engagedBudget').textContent = formatAmount(data.engaged_budget);
+        
+        // Mettre à jour le tableau
+        const tbody = document.querySelector('#marketsTable tbody');
+        tbody.innerHTML = data.markets.map(market => `
+            <tr>
+                <td><strong>${market.market_number}</strong></td>
+                <td>${market.object}</td>
+                <td>${market.type}</td>
+                <td>${formatAmount(market.budget)}</td>
+                <td><span class="badge badge-status ${getStatusClass(market.status)}">${market.status}</span></td>
+                <td>${formatDate(market.start_date)}</td>
+                <td>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" role="progressbar" style="width: ${market.progress}%">${market.progress}%</div>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+        
+        // Mettre à jour les graphiques
+        updateCharts(data);
+        
+    } catch (error) {
+        showNotification('Erreur lors de la génération du rapport', 'danger');
+    }
+}
+
+function updateCharts(data) {
+    // Graphique d'évolution
+    const evolutionCtx = document.getElementById('evolutionChart').getContext('2d');
+    
+    if (evolutionChart) {
+        evolutionChart.destroy();
+    }
+    
+    evolutionChart = new Chart(evolutionCtx, {
+        type: 'line',
+        data: {
+            labels: data.evolution.labels,
+            datasets: [{
+                label: 'Marchés créés',
+                data: data.evolution.created,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Marchés terminés',
+                data: data.evolution.completed,
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Graphique par type
+    const typeCtx = document.getElementById('typeChart').getContext('2d');
+    
+    if (typeChart) {
+        typeChart.destroy();
+    }
+    
+    typeChart = new Chart(typeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: data.by_type.labels,
+            datasets: [{
+                data: data.by_type.values,
+                backgroundColor: [
+                    '#28a745',
+                    '#007bff',
+                    '#ffc107',
+                    '#dc3545',
+                    '#17a2b8'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function getStatusClass(status) {
+    const classes = {
+        'termine': 'bg-success',
+        'en_cours': 'bg-primary',
+        'en_retard': 'bg-danger',
+        'en_attente': 'bg-warning',
+        'annule': 'bg-dark'
+    };
+    return classes[status] || 'bg-secondary';
+}
+
+async function exportPDF() {
+    const month = document.getElementById('month').value;
+    const year = document.getElementById('year').value;
+    
+    try {
+        const response = await fetch(`/api/exports/monthly/pdf?month=${month}&year=${year}`);
+        const blob = await response.blob();
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rapport_mensuel_${year}_${month}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        showNotification('Rapport PDF exporté avec succès', 'success');
+    } catch (error) {
+        showNotification('Erreur lors de l\'export PDF', 'danger');
+    }
+}
+
+async function exportExcel() {
+    const month = document.getElementById('month').value;
+    const year = document.getElementById('year').value;
+    
+    try {
+        const response = await fetch(`/api/exports/monthly/excel?month=${month}&year=${year}`);
+        const blob = await response.blob();
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rapport_mensuel_${year}_${month}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        showNotification('Rapport Excel exporté avec succès', 'success');
+    } catch (error) {
+        showNotification('Erreur lors de l\'export Excel', 'danger');
+    }
+}
+
+async function exportWord() {
+    const month = document.getElementById('month').value;
+    const year = document.getElementById('year').value;
+    
+    try {
+        const response = await fetch(`/api/exports/monthly/word?month=${month}&year=${year}`);
+        const blob = await response.blob();
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rapport_mensuel_${year}_${month}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        showNotification('Rapport Word exporté avec succès', 'success');
+    } catch (error) {
+        showNotification('Erreur lors de l\'export Word', 'danger');
+    }
+}
+
+// Initialiser avec le mois courant
+document.addEventListener('DOMContentLoaded', function() {
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    
+    document.getElementById('month').value = currentMonth;
+    document.getElementById('year').value = currentYear;
+    
+    generateReport();
+});
+</script>
+{% endblock %}

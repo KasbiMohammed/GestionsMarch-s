@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block title %}Utilisateurs - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people"></i> Gestion des Utilisateurs</h2>
+    <div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newUserModal">
+            <i class="bi bi-person-plus"></i> Nouvel utilisateur
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="usersTab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#all" type="button">
+                    Tous
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#active" type="button">
+                    Actifs
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#inactive" type="button">
+                    Inactifs
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="usersTabContent">
+            <div class="tab-pane fade show active" id="all">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Nom d'utilisateur</th>
+                                <th>Nom complet</th>
+                                <th>Email</th>
+                                <th>Rôle</th>
+                                <th>Téléphone</th>
+                                <th>Statut</th>
+                                <th>Créé le</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Les données seront chargées via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="active">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="activeUsersTable">
+                        <thead>
+                            <tr>
+                                <th>Nom d'utilisateur</th>
+                                <th>Nom complet</th>
+                                <th>Email</th>
+                                <th>Rôle</th>
+                                <th>Téléphone</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="inactive">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="inactiveUsersTable">
+                        <thead>
+                            <tr>
+                                <th>Nom d'utilisateur</th>
+                                <th>Nom complet</th>
+                                <th>Email</th>
+                                <th>Rôle</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nouvel utilisateur -->
+<div class="modal fade" id="newUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouvel utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newUserForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Nom d'utilisateur *</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Mot de passe *</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="fullName" class="form-label">Nom complet</label>
+                        <input type="text" class="form-control" id="fullName">
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Téléphone</label>
+                        <input type="tel" class="form-control" id="phone">
+                    </div>
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Rôle *</label>
+                        <select class="form-select" id="role" required>
+                            <option value="">Sélectionner un rôle</option>
+                            <option value="administrateur">Administrateur</option>
+                            <option value="president">Président</option>
+                            <option value="directeur_services">Directeur des Services</option>
+                            <option value="service_marches">Service des Marchés</option>
+                            <option value="service_technique">Service Technique</option>
+                            <option value="service_financier">Service Financier</option>
+                            <option value="controle_interne">Contrôle Interne</option>
+                            <option value="consultation">Consultation</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="createUser()">Créer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modifier utilisateur -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier l'utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="mb-3">
+                        <label for="editUsername" class="form-label">Nom d'utilisateur</label>
+                        <input type="text" class="form-control" id="editUsername" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editEmail">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editFullName" class="form-label">Nom complet</label>
+                        <input type="text" class="form-control" id="editFullName">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPhone" class="form-label">Téléphone</label>
+                        <input type="tel" class="form-control" id="editPhone">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRole" class="form-label">Rôle</label>
+                        <select class="form-select" id="editRole">
+                            <option value="administrateur">Administrateur</option>
+                            <option value="president">Président</option>
+                            <option value="directeur_services">Directeur des Services</option>
+                            <option value="service_marches">Service des Marchés</option>
+                            <option value="service_technique">Service Technique</option>
+                            <option value="service_financier">Service Financier</option>
+                            <option value="controle_interne">Contrôle Interne</option>
+                            <option value="consultation">Consultation</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editIsActive" class="form-label">Statut</label>
+                        <select class="form-select" id="editIsActive">
+                            <option value="true">Actif</option>
+                            <option value="false">Inactif</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="updateUser()">Modifier</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/users/');
+        const users = await response.json();
+        
+        // Remplir le tableau principal
+        const tbody = document.querySelector('#usersTable tbody');
+        tbody.innerHTML = users.map(user => `
+            <tr>
+                <td><strong>${user.username}</strong></td>
+                <td>${user.full_name || '-'}</td>
+                <td>${user.email}</td>
+                <td><span class="badge bg-secondary">${formatRole(user.role)}</span></td>
+                <td>${user.phone || '-'}</td>
+                <td>
+                    <span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'}">
+                        ${user.is_active ? 'Actif' : 'Inactif'}
+                    </span>
+                </td>
+                <td>${formatDate(user.created_at)}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary btn-action" onclick="editUser(${user.id})">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-action" onclick="deleteUser(${user.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+        // Filtrer par statut
+        const activeUsers = users.filter(u => u.is_active);
+        const inactiveUsers = users.filter(u => !u.is_active);
+        
+        fillUsersTable('activeUsersTable', activeUsers);
+        fillUsersTable('inactiveUsersTable', inactiveUsers);
+    } catch (error) {
+        showNotification('Erreur lors du chargement des utilisateurs', 'danger');
+    }
+}
+
+function formatRole(role) {
+    const roles = {
+        'administrateur': 'Administrateur',
+        'president': 'Président',
+        'directeur_services': 'Directeur Services',
+        'service_marches': 'Service Marchés',
+        'service_technique': 'Service Technique',
+        'service_financier': 'Service Financier',
+        'controle_interne': 'Contrôle Interne',
+        'consultation': 'Consultation'
+    };
+    return roles[role] || role;
+}
+
+function fillUsersTable(tableId, users) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    tbody.innerHTML = users.map(user => `
+        <tr>
+            <td><strong>${user.username}</strong></td>
+            <td>${user.full_name || '-'}</td>
+            <td>${user.email}</td>
+            <td><span class="badge bg-secondary">${formatRole(user.role)}</span></td>
+            <td>${user.phone || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-primary btn-action" onclick="editUser(${user.id})">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function createUser() {
+    const formData = {
+        username: document.getElementById('username').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+        full_name: document.getElementById('fullName').value,
+        phone: document.getElementById('phone').value,
+        role: document.getElementById('role').value
+    };
+    
+    try {
+        const response = await fetch('/api/users/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            showNotification('Utilisateur créé avec succès', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('newUserModal')).hide();
+            document.getElementById('newUserForm').reset();
+            loadUsers();
+        } else {
+            const data = await response.json();
+            showNotification(data.detail || 'Erreur lors de la création', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'danger');
+    }
+}
+
+async function editUser(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}`);
+        const user = await response.json();
+        
+        document.getElementById('editUserId').value = user.id;
+        document.getElementById('editUsername').value = user.username;
+        document.getElementById('editEmail').value = user.email;
+        document.getElementById('editFullName').value = user.full_name || '';
+        document.getElementById('editPhone').value = user.phone || '';
+        document.getElementById('editRole').value = user.role;
+        document.getElementById('editIsActive').value = user.is_active.toString();
+        
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editUserModal')).show();
+    } catch (error) {
+        showNotification('Erreur lors du chargement de l\'utilisateur', 'danger');
+    }
+}
+
+async function updateUser() {
+    const userId = document.getElementById('editUserId').value;
+    const formData = {
+        email: document.getElementById('editEmail').value,
+        full_name: document.getElementById('editFullName').value,
+        phone: document.getElementById('editPhone').value,
+        role: document.getElementById('editRole').value,
+        is_active: document.getElementById('editIsActive').value === 'true'
+    };
+    
+    try {
+        const response = await fetch(`/api/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            showNotification('Utilisateur modifié avec succès', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            loadUsers();
+        } else {
+            const data = await response.json();
+            showNotification(data.detail || 'Erreur lors de la modification', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'danger');
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/users/${userId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Utilisateur supprimé avec succès', 'success');
+            loadUsers();
+        } else {
+            showNotification('Erreur lors de la suppression', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'danger');
+    }
+}
+
+// Charger au démarrage
+document.addEventListener('DOMContentLoaded', loadUsers);
+</script>
+{% endblock %}

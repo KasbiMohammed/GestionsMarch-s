@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Planification Annuelle des Achats{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Planification Annuelle des Achats</h4>
+                    <div>
+                        <button class="btn btn-primary" onclick="showCreateModal()">
+                            <i class="fas fa-plus"></i> Nouvelle Planification
+                        </button>
+                        <button class="btn btn-success" onclick="exportData()">
+                            <i class="fas fa-download"></i> Exporter
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Filtres -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <select class="form-select" id="yearFilter" onchange="filterPlannings()">
+                                <option value="">Toutes les années</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="statusFilter" onchange="filterPlannings()">
+                                <option value="">Tous les statuts</option>
+                                <option value="brouillon">Brouillon</option>
+                                <option value="soumis">Soumis</option>
+                                <option value="validé">Validé</option>
+                                <option value="approuvé">Approuvé</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="serviceFilter" onchange="filterPlannings()">
+                                <option value="">Tous les services</option>
+                                <option value="1">Service Marchés</option>
+                                <option value="2">Service Technique</option>
+                                <option value="3">Service Financier</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="searchFilter" placeholder="Rechercher..." onkeyup="filterPlannings()">
+                        </div>
+                    </div>
+
+                    <!-- Statistiques -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Budget</h5>
+                                    <h3 id="totalBudget">0 MAD</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Consommé</h5>
+                                    <h3 id="consumedBudget">0 MAD</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Besoins</h5>
+                                    <h3 id="totalNeeds">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Réalisation</h5>
+                                    <h3 id="realizationRate">0%</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tableau des planifications -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="planningsTable">
+                            <thead>
+                                <tr>
+                                    <th>Année</th>
+                                    <th>Service</th>
+                                    <th>Titre</th>
+                                    <th>Budget Total</th>
+                                    <th>Consommé</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="planningsBody">
+                                <!-- Rempli par JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de création -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouvelle Planification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Année</label>
+                            <input type="number" class="form-control" name="year" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Service</label>
+                            <select class="form-select" name="service_id">
+                                <option value="">Sélectionner...</option>
+                                <option value="1">Service Marchés</option>
+                                <option value="2">Service Technique</option>
+                                <option value="3">Service Financier</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Titre</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Budget Total (MAD)</label>
+                        <input type="number" class="form-control" name="total_budget" step="0.01">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="createPlanning()">Créer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal des besoins -->
+<div class="modal fade" id="needsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Besoins de la Planification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <h6>Liste des besoins</h6>
+                    <button class="btn btn-sm btn-primary" onclick="showAddNeedModal()">
+                        <i class="fas fa-plus"></i> Ajouter un besoin
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Titre</th>
+                                <th>Priorité</th>
+                                <th>Montant Estimé</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="needsBody">
+                            <!-- Rempli par JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPlanningId = null;
+
+function loadPlannings() {
+    // Appel API pour charger les planifications
+    fetch('/api/planning/')
+        .then(response => response.json())
+        .then(data => {
+            displayPlannings(data);
+            updateStatistics(data);
+        });
+}
+
+function displayPlannings(plannings) {
+    const tbody = document.getElementById('planningsBody');
+    tbody.innerHTML = '';
+    
+    plannings.forEach(planning => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${planning.year}</td>
+            <td>${planning.service_name || '-'}</td>
+            <td>${planning.title}</td>
+            <td>${formatCurrency(planning.total_budget)}</td>
+            <td>${formatCurrency(planning.consumed_budget)}</td>
+            <td><span class="badge bg-${getStatusColor(planning.status)}">${planning.status}</span></td>
+            <td>
+                <button class="btn btn-sm btn-info" onclick="viewNeeds(${planning.id})">
+                    <i class="fas fa-list"></i>
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="editPlanning(${planning.id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-success" onclick="submitPlanning(${planning.id})" ${planning.status !== 'brouillon' ? 'disabled' : ''}>
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function updateStatistics(plannings) {
+    const totalBudget = plannings.reduce((sum, p) => sum + (p.total_budget || 0), 0);
+    const consumedBudget = plannings.reduce((sum, p) => sum + (p.consumed_budget || 0), 0);
+    const totalNeeds = plannings.reduce((sum, p) => sum + (p.needs_count || 0), 0);
+    const realizedNeeds = plannings.reduce((sum, p) => sum + (p.realized_needs_count || 0), 0);
+    
+    document.getElementById('totalBudget').textContent = formatCurrency(totalBudget);
+    document.getElementById('consumedBudget').textContent = formatCurrency(consumedBudget);
+    document.getElementById('totalNeeds').textContent = totalNeeds;
+    document.getElementById('realizationRate').textContent = totalNeeds > 0 ? ((realizedNeeds / totalNeeds) * 100).toFixed(1) + '%' : '0%';
+}
+
+function showCreateModal() {
+    document.getElementById('createForm').reset();
+    new bootstrap.Modal(document.getElementById('createModal')).show();
+}
+
+function createPlanning() {
+    const form = document.getElementById('createForm');
+    const formData = new FormData(form);
+    
+    fetch('/api/planning/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
+        loadPlannings();
+        showNotification('Planification créée avec succès', 'success');
+    });
+}
+
+function viewNeeds(planningId) {
+    currentPlanningId = planningId;
+    fetch(`/api/planning/${planningId}/needs`)
+        .then(response => response.json())
+        .then(data => {
+            displayNeeds(data);
+            new bootstrap.Modal(document.getElementById('needsModal')).show();
+        });
+}
+
+function displayNeeds(needs) {
+    const tbody = document.getElementById('needsBody');
+    tbody.innerHTML = '';
+    
+    needs.forEach(need => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${need.title}</td>
+            <td><span class="badge bg-${getPriorityColor(need.priority)}">${need.priority}</span></td>
+            <td>${formatCurrency(need.estimated_amount)}</td>
+            <td>${need.is_realized ? '<span class="badge bg-success">Réalisé</span>' : '<span class="badge bg-secondary">En attente</span>'}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editNeed(${need.id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(amount || 0);
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'brouillon': 'secondary',
+        'soumis': 'info',
+        'validé': 'warning',
+        'approuvé': 'success',
+        'rejeté': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+
+function getPriorityColor(priority) {
+    const colors = {
+        'faible': 'info',
+        'moyenne': 'primary',
+        'haute': 'warning',
+        'urgent': 'danger'
+    };
+    return colors[priority] || 'secondary';
+}
+
+// Charger les planifications au démarrage
+document.addEventListener('DOMContentLoaded', loadPlannings);
+</script>
+{% endblock %}

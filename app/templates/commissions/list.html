@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Commissions{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Gestion des Commissions</h4>
+                    <div>
+                        <button class="btn btn-primary" onclick="showCreateModal()">
+                            <i class="fas fa-plus"></i> Nouvelle Commission
+                        </button>
+                        <button class="btn btn-success" onclick="exportPV()">
+                            <i class="fas fa-file-pdf"></i> Exporter PV
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Filtres -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <select class="form-select" id="typeFilter" onchange="filterCommissions()">
+                                <option value="">Tous les types</option>
+                                <option value="ouverture_plis">Ouverture des plis</option>
+                                <option value="analyse_technique">Analyse technique</option>
+                                <option value="analyse_financiere">Analyse financière</option>
+                                <option value="attribution">Attribution</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="statusFilter" onchange="filterCommissions()">
+                                <option value="">Tous les statuts</option>
+                                <option value="planifiée">Planifiée</option>
+                                <option value="convquée">Convquée</option>
+                                <option value="en_cours">En cours</option>
+                                <option value="terminée">Terminée</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="date" class="form-control" id="dateFilter" onchange="filterCommissions()">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="searchFilter" placeholder="Rechercher..." onkeyup="filterCommissions()">
+                        </div>
+                    </div>
+
+                    <!-- Tableau des commissions -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="commissionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Référence</th>
+                                    <th>Type</th>
+                                    <th>Marché</th>
+                                    <th>Date prévue</th>
+                                    <th>Lieu</th>
+                                    <th>Membres</th>
+                                    <th>Quorum</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="commissionsBody">
+                                <!-- Rempli par JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de création -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouvelle Commission</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Type de commission</label>
+                            <select class="form-select" name="commission_type" required>
+                                <option value="">Sélectionner...</option>
+                                <option value="ouverture_plis">Ouverture des plis</option>
+                                <option value="analyse_technique">Analyse technique</option>
+                                <option value="analyse_financiere">Analyse financière</option>
+                                <option value="attribution">Attribution</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Marché</label>
+                            <select class="form-select" name="market_id" required>
+                                <option value="">Sélectionner...</option>
+                                <!-- Rempli par JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date prévue</label>
+                            <input type="date" class="form-control" name="planned_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Heure</label>
+                            <input type="time" class="form-control" name="planned_time">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Lieu</label>
+                        <input type="text" class="form-control" name="location">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Titre</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Membres requis</label>
+                        <input type="number" class="form-control" name="required_members" value="3" min="1">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="createCommission()">Créer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal des membres -->
+<div class="modal fade" id="membersModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Membres de la Commission</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <h6>Liste des membres</h6>
+                    <button class="btn btn-sm btn-primary" onclick="showAddMemberodal()">
+                        <i class="fas fa-user-plus"></i> Ajouter un membre
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Membre</th>
+                                <th>Rôle</th>
+                                <th>Président</th>
+                                <th>Présence</th>
+                                <th>Signature</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersBody">
+                            <!-- Rempli par JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de PV -->
+<div class="modal fade" id="pvModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Procès-Verbal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Contenu du PV</label>
+                    <textarea class="form-control" id="pvContent" rows="15"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" onclick="generatePV()">Générer PV</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentCommissionId = null;
+
+function loadCommissions() {
+    fetch('/api/commissions/')
+        .then(response => response.json())
+        .then(data => {
+            displayCommissions(data);
+        });
+}
+
+function displayCommissions(commissions) {
+    const tbody = document.getElementById('commissionsBody');
+    tbody.innerHTML = '';
+    
+    commissions.forEach(commission => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${commission.reference}</td>
+            <td>${formatCommissionType(commission.commission_type)}</td>
+            <td>${commission.market_number || '-'}</td>
+            <td>${formatDate(commission.planned_date)}</td>
+            <td>${commission.location || '-'}</td>
+            <td>${commission.actual_members}/${commission.required_members}</td>
+            <td><span class="badge bg-${commission.quorum_reached ? 'success' : 'danger'}">${commission.quorum_reached ? 'Atteint' : 'Non atteint'}</span></td>
+            <td><span class="badge bg-${getStatusColor(commission.status)}">${commission.status}</span></td>
+            <td>
+                <button class="btn btn-sm btn-info" onclick="viewMembers(${commission.id})">
+                    <i class="fas fa-users"></i>
+                </button>
+                <button class="btn btn-sm btn-warning" onclick="startCommission(${commission.id})" ${commission.status !== 'convquée' ? 'disabled' : ''}>
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="btn btn-sm btn-success" onclick="showPVModal(${commission.id})" ${!commission.quorum_reached ? 'disabled' : ''}>
+                    <i class="fas fa-file-alt"></i>
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="completeCommission(${commission.id})" ${commission.status !== 'en_cours' ? 'disabled' : ''}>
+                    <i class="fas fa-check"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function showCreateModal() {
+    document.getElementById('createForm').reset();
+    loadMarkets();
+    new bootstrap.Modal(document.getElementById('createModal')).show();
+}
+
+function loadMarkets() {
+    fetch('/api/markets/')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.querySelector('select[name="market_id"]');
+            select.innerHTML = '<option value="">Sélectionner...</option>';
+            data.forEach(market => {
+                select.innerHTML += `<option value="${market.id}">${market.market_number} - ${market.object}</option>`;
+            });
+        });
+}
+
+function createCommission() {
+    const form = document.getElementById('createForm');
+    const formData = new FormData(form);
+    
+    fetch('/api/commissions/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
+        loadCommissions();
+        showNotification('Commission créée avec succès', 'success');
+    });
+}
+
+function viewMembers(commissionId) {
+    currentCommissionId = commissionId;
+    fetch(`/api/commissions/${commissionId}/members`)
+        .then(response => response.json())
+        .then(data => {
+            displayMembers(data);
+            new bootstrap.Modal(document.getElementById('membersModal')).show();
+        });
+}
+
+function displayMembers(members) {
+    const tbody = document.getElementById('membersBody');
+    tbody.innerHTML = '';
+    
+    members.forEach(member => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${member.user_name}</td>
+            <td>${member.role}</td>
+            <td>${member.is_president ? '<i class="fas fa-star text-warning"></i>' : '-'}</td>
+            <td>${member.attended ? '<i class="fas fa-check text-success"></i>' : '<i class="fas fa-times text-danger"></i>'}</td>
+            <td>${member.signature ? '<i class="fas fa-signature text-success"></i>' : '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editMember(${member.id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function showPVModal(commissionId) {
+    currentCommissionId = commissionId;
+    document.getElementById('pvContent').value = '';
+    new bootstrap.Modal(document.getElementById('pvModal')).show();
+}
+
+function generatePV() {
+    const pvContent = document.getElementById('pvContent').value;
+    
+    fetch(`/api/commissions/${currentCommissionId}/pv`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: pvContent })
+    })
+    .then(response => response.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('pvModal')).hide();
+        loadCommissions();
+        showNotification('PV généré avec succès', 'success');
+    });
+}
+
+function formatCommissionType(type) {
+    const types = {
+        'ouverture_plis': 'Ouverture des plis',
+        'analyse_technique': 'Analyse technique',
+        'analyse_financiere': 'Analyse financière',
+        'attribution': 'Attribution'
+    };
+    return types[type] || type;
+}
+
+function formatDate(date) {
+    return new Date(date).toLocaleDateString('fr-FR');
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'planifiée': 'secondary',
+        'convquée': 'info',
+        'en_cours': 'warning',
+        'terminée': 'success',
+        'annulée': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+
+document.addEventListener('DOMContentLoaded', loadCommissions);
+</script>
+{% endblock %}

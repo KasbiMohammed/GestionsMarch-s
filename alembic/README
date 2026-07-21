@@ -1,0 +1,42 @@
+# Alembic Migrations
+
+Ce répertoire contient les scripts de migration de la base de données.
+
+## Structure
+
+- `env.py` - Configuration de l'environnement Alembic
+- `script.py.mako` - Template pour les nouveaux scripts de migration
+- `versions/` - Répertoire contenant les scripts de migration
+
+## Commandes utiles
+
+### Créer une nouvelle migration
+```bash
+alembic revision --autogenerate -m "description de la migration"
+```
+
+### Appliquer les migrations
+```bash
+alembic upgrade head
+```
+
+### Annuler la dernière migration
+```bash
+alembic downgrade -1
+```
+
+### Voir l'historique des migrations
+```bash
+alembic history
+```
+
+### Vérer l'état actuel
+```bash
+alembic current
+```
+
+## Notes
+
+- Les migrations sont générées automatiquement à partir des modèles SQLAlchemy
+- Toujours vérifier le contenu des migrations avant de les appliquer
+- Ne jamais modifier directement les fichiers de migration existants

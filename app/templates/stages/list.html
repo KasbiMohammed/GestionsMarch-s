@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Étapes - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-list-task"></i> Étapes du marché</h2>
+    <div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newStageModal">
+            <i class="bi bi-plus-circle"></i> Nouvelle étape
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="stagesTab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#all" type="button">
+                    Toutes
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#not-started" type="button">
+                    Non commencées
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#in-progress" type="button">
+                    En cours
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#completed" type="button">
+                    Terminées
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#late" type="button">
+                    En retard
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="stagesTabContent">
+            <div class="tab-pane fade show active" id="all">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="stagesTable">
+                        <thead>
+                            <tr>
+                                <th>Ordre</th>
+                                <th>Nom</th>
+                                <th>Statut</th>
+                                <th>Progression</th>
+                                <th>Date prévue</th>
+                                <th>Date réelle</th>
+                                <th>Responsable</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Les données seront chargées via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="not-started">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="notStartedTable">
+                        <thead>
+                            <tr>
+                                <th>Ordre</th>
+                                <th>Nom</th>
+                                <th>Progression</th>
+                                <th>Date prévue</th>
+                                <th>Responsable</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="in-progress">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="inProgressTable">
+                        <thead>
+                            <tr>
+                                <th>Ordre</th>
+                                <th>Nom</th>
+                                <th>Progression</th>
+                                <th>Date prévue</th>
+                                <th>Responsable</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="completed">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="completedTable">
+                        <thead>
+                            <tr>
+                                <th>Ordre</th>
+                                <th>Nom</th>
+                                <th>Date réelle</th>
+                                <th>Responsable</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="late">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="lateTable">
+                        <thead>
+                            <tr>
+                                <th>Ordre</th>
+                                <th>Nom</th>
+                                <th>Retard (jours)</th>
+                                <th>Date prévue</th>
+                                <th>Responsable</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nouvelle étape -->
+<div class="modal fade" id="newStageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouvelle étape</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newStageForm">
+                    <div class="mb-3">
+                        <label for="stageName" class="form-label">Nom de l'étape</label>
+                        <input type="text" class="form-control" id="stageName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stageOrder" class="form-label">Ordre</label>
+                        <input type="number" class="form-control" id="stageOrder" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stagePlannedDate" class="form-label">Date prévue</label>
+                        <input type="date" class="form-control" id="stagePlannedDate">
+                    </div>
+                    <div class="mb-3">
+                        <label for="stageResponsible" class="form-label">Responsable</label>
+                        <input type="text" class="form-control" id="stageResponsible">
+                    </div>
+                    <div class="mb-3">
+                        <label for="stageObservations" class="form-label">Observations</label>
+                        <textarea class="form-control" id="stageObservations" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="createStage()">Créer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Charger les étapes depuis l'API
+async function loadStages() {
+    const marketId = new URLSearchParams(window.location.search).get('market_id');
+    if (!marketId) return;
+    
+    try {
+        const response = await fetch(`/api/stages/market/${marketId}`);
+        const stages = await response.json();
+        
+        // Remplir le tableau principal
+        const tbody = document.querySelector('#stagesTable tbody');
+        tbody.innerHTML = stages.map(stage => `
+            <tr>
+                <td>${stage.order}</td>
+                <td>${stage.name}</td>
+                <td><span class="badge badge-status ${getStatusClass(stage.status)}">${stage.status}</span></td>
+                <td>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" role="progressbar" style="width: ${stage.progress_percentage}%">${stage.progress_percentage}%</div>
+                    </div>
+                </td>
+                <td>${formatDate(stage.planned_date)}</td>
+                <td>${formatDate(stage.actual_date)}</td>
+                <td>${stage.responsible || '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary btn-action" onclick="editStage(${stage.id})">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success btn-action" onclick="completeStage(${stage.id})">
+                        <i class="bi bi-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-action" onclick="deleteStage(${stage.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+        // Filtrer par statut
+        filterStagesByStatus(stages);
+    } catch (error) {
+        showNotification('Erreur lors du chargement des étapes', 'danger');
+    }
+}
+
+function getStatusClass(status) {
+    const classes = {
+        'non_commence': 'bg-secondary',
+        'en_cours': 'bg-primary',
+        'termine': 'bg-success',
+        'en_attente': 'bg-warning',
+        'bloque': 'bg-danger',
+        'annule': 'bg-dark'
+    };
+    return classes[status] || 'bg-secondary';
+}
+
+function filterStagesByStatus(stages) {
+    const notStarted = stages.filter(s => s.status === 'non_commence');
+    const inProgress = stages.filter(s => s.status === 'en_cours');
+    const completed = stages.filter(s => s.status === 'termine');
+    const late = stages.filter(s => s.is_late);
+    
+    // Remplir les tableaux filtrés
+    fillFilteredTable('notStartedTable', notStarted);
+    fillFilteredTable('inProgressTable', inProgress);
+    fillFilteredTable('completedTable', completed);
+    fillFilteredTable('lateTable', late);
+}
+
+function fillFilteredTable(tableId, stages) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    tbody.innerHTML = stages.map(stage => `
+        <tr>
+            <td>${stage.order}</td>
+            <td>${stage.name}</td>
+            ${tableId === 'lateTable' ? `<td class="text-danger">${stage.delay_days} jours</td>` : ''}
+            <td>${formatDate(stage.planned_date)}</td>
+            <td>${stage.responsible || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-primary btn-action" onclick="editStage(${stage.id})">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function createStage() {
+    const marketId = new URLSearchParams(window.location.search).get('market_id');
+    const formData = {
+        market_id: parseInt(marketId),
+        name: document.getElementById('stageName').value,
+        order: parseInt(document.getElementById('stageOrder').value),
+        planned_date: document.getElementById('stagePlannedDate').value,
+        responsible: document.getElementById('stageResponsible').value,
+        observations: document.getElementById('stageObservations').value
+    };
+    
+    try {
+        const response = await fetch('/api/stages/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            showNotification('Étape créée avec succès', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('newStageModal')).hide();
+            loadStages();
+        } else {
+            showNotification('Erreur lors de la création', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'danger');
+    }
+}
+
+// Charger au démarrage
+document.addEventListener('DOMContentLoaded', loadStages);
+</script>
+{% endblock %}

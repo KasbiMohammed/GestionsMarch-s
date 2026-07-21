@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}{{ market.market_number }} - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">{{ market.market_number }}</h1>
+        <p class="text-muted mb-0">{{ market.object }}</p>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="exportToPDF()">
+            <i class="bi bi-file-earmark-pdf"></i> Exporter PDF
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="editMarket()">
+            <i class="bi bi-pencil"></i> Modifier
+        </button>
+        <a href="/markets" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+</div>
+
+<!-- Informations générales -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Informations Générales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Numéro du marché</label>
+                        <p class="mb-0"><strong>{{ market.market_number }}</strong></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Maître d'ouvrage</label>
+                        <p class="mb-0"><strong>{{ market.master_of_work }}</strong></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Type de marché</label>
+                        <p class="mb-0"><span class="badge bg-secondary">{{ market.market_type }}</span></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Mode de passation</label>
+                        <p class="mb-0"><span class="badge bg-info">{{ market.procurement_method }}</span></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Service responsable</label>
+                        <p class="mb-0">{{ market.responsible_service or 'Non spécifié' }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Responsable suivi</label>
+                        <p class="mb-0">{{ market.follow_up_responsible or 'Non spécifié' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Statut</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <span class="badge badge-status bg-{{ getStatusColor(market.status) }} fs-5">
+                        {{ market.status.replace('_', ' ')|upper }}
+                    </span>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Progression</label>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ market.progress_percentage }}%;">
+                            {{ market.progress_percentage }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Montants -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Montants</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Montant estimé</label>
+                        <p class="mb-0 h4">{{ "{:,.2f}".format(market.estimated_amount) }} MAD</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Montant définitif</label>
+                        <p class="mb-0 h4">{{ "{:,.2f}".format(market.definitive_amount) if market.definitive_amount else 'N/A' }} MAD</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Budget</label>
+                        <p class="mb-0">{{ "{:,.2f}".format(market.budget) if market.budget else 'N/A' }} MAD</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Crédits</label>
+                        <p class="mb-0">{{ "{:,.2f}".format(market.credits) if market.credits else 'N/A' }} MAD</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Dates Importantes</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Publication</label>
+                        <p class="mb-0">{{ market.publication_date.strftime('%d/%m/%Y') if market.publication_date else 'N/A' }}</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Ouverture des plis</label>
+                        <p class="mb-0">{{ market.opening_date.strftime('%d/%m/%Y') if market.opening_date else 'N/A' }}</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Attribution</label>
+                        <p class="mb-0">{{ market.attribution_date.strftime('%d/%m/%Y') if market.attribution_date else 'N/A' }}</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Notification</label>
+                        <p class="mb-0">{{ market.notification_date.strftime('%d/%m/%Y') if market.notification_date else 'N/A' }}</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Début des travaux</label>
+                        <p class="mb-0">{{ market.start_date.strftime('%d/%m/%Y') if market.start_date else 'N/A' }}</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Fin prévue</label>
+                        <p class="mb-0">{{ market.expected_end_date.strftime('%d/%m/%Y') if market.expected_end_date else 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Entreprises participantes -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Entreprises Participantes ({{ market.companies|length }})</h5>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addCompanyModal">
+            <i class="bi bi-plus"></i> Ajouter
+        </button>
+    </div>
+    <div class="card-body">
+        {% if market.companies %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Entreprise</th>
+                        <th>Montant offre</th>
+                        <th>Rang</th>
+                        <th>Attributaire</th>
+                        <th>Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company in market.companies %}
+                    <tr>
+                        <td><strong>{{ company.name }}</strong></td>
+                        <td>{{ "{:,.2f}".format(company.offer_amount) if company.offer_amount else 'N/A' }} MAD</td>
+                        <td>{{ company.offer_rank or '-' }}</td>
+                        <td>
+                            {% if company.is_attributed %}
+                            <span class="badge bg-success">Oui</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Non</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ "{:.2f}".format(company.total_score) if company.total_score else '-' }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary btn-action">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted">Aucune entreprise participante</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Étapes du marché -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Étapes du Marché</h5>
+        <button class="btn btn-sm btn-primary" onclick="loadStages()">
+            <i class="bi bi-arrow-clockwise"></i> Actualiser
+        </button>
+    </div>
+    <div class="card-body">
+        <div id="stagesContainer">
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Documents -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Documents</h5>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#uploadDocumentModal">
+            <i class="bi bi-upload"></i> Uploader
+        </button>
+    </div>
+    <div class="card-body">
+        <div id="documentsContainer">
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Observations -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Observations</h5>
+    </div>
+    <div class="card-body">
+        <p>{{ market.observations or 'Aucune observation' }}</p>
+    </div>
+</div>
+
+<!-- Modal Ajout Entreprise -->
+<div class="modal fade" id="addCompanyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ajouter une Entreprise</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCompanyForm">
+                    <div class="mb-3">
+                        <label for="companyName" class="form-label">Nom de l'entreprise *</label>
+                        <input type="text" class="form-control" id="companyName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="companyAmount" class="form-label">Montant de l'offre (MAD)</label>
+                        <input type="number" class="form-control" id="companyAmount" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label for="companyRC" class="form-label">RC</label>
+                        <input type="text" class="form-control" id="companyRC">
+                    </div>
+                    <div class="mb-3">
+                        <label for="companyIF" class="form-label">IF</label>
+                        <input type="text" class="form-control" id="companyIF">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="addCompany()">Ajouter</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Upload Document -->
+<div class="modal fade" id="uploadDocumentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Uploader un Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadDocumentForm">
+                    <div class="mb-3">
+                        <label for="documentName" class="form-label">Nom du document *</label>
+                        <input type="text" class="form-control" id="documentName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="documentFile" class="form-label">Fichier *</label>
+                        <input type="file" class="form-control" id="documentFile" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="documentType" class="form-label">Type</label>
+                        <select class="form-select" id="documentType">
+                            <option value="">Sélectionner...</option>
+                            <option value="cps">CPS</option>
+                            <option value="bpu">BPU</option>
+                            <option value="dqe">DQE</option>
+                            <option value="offre">Offre</option>
+                            <option value="contrat">Contrat</option>
+                            <option value="autre">Autre</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="documentDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="documentDescription" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="uploadDocument()">Uploader</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const marketId = {{ market.id }};
+
+function getStatusColor(status) {
+    const colors = {
+        'planifie': 'secondary',
+        'en_cours': 'primary',
+        'termine': 'success',
+        'en_attente': 'warning',
+        'en_retard': 'danger',
+        'annule': 'dark'
+    };
+    return colors[status] || 'secondary';
+}
+
+async function loadStages() {
+    try {
+        const response = await fetch(`/api/stages/market/${marketId}`);
+        const stages = await response.json();
+        
+        const container = document.getElementById('stagesContainer');
+        
+        if (stages.length === 0) {
+            container.innerHTML = '<p class="text-center text-muted">Aucune étape définie</p>';
+            return;
+        }
+        
+        let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Étape</th><th>Statut</th><th>Progression</th><th>Date prévue</th><th>Date réelle</th><th>Alerte</th></tr></thead><tbody>';
+        
+        stages.forEach(stage => {
+            html += `
+                <tr>
+                    <td><strong>${stage.name}</strong></td>
+                    <td><span class="badge badge-status bg-${getStatusColor(stage.status)}">${stage.status.replace('_', ' ')}</span></td>
+                    <td>
+                        <div class="progress" style="height: 15px;">
+                            <div class="progress-bar" role="progressbar" style="width: ${stage.progress_percentage}%;">
+                                ${stage.progress_percentage}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>${stage.planned_date ? new Date(stage.planned_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
+                    <td>${stage.actual_date ? new Date(stage.actual_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
+                    <td><span class="badge alert-level-${stage.alert_level}">${stage.alert_level || '-'}</span></td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Erreur lors du chargement des étapes:', error);
+    }
+}
+
+async function loadDocuments() {
+    try {
+        const response = await fetch(`/api/documents/market/${marketId}`);
+        const documents = await response.json();
+        
+        const container = document.getElementById('documentsContainer');
+        
+        if (documents.length === 0) {
+            container.innerHTML = '<p class="text-center text-muted">Aucun document</p>';
+            return;
+        }
+        
+        let html = '<div class="row">';
+        
+        documents.forEach(doc => {
+            html += `
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">${doc.name}</h6>
+                            <p class="card-text small text-muted">${doc.description or ''}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-secondary">${doc.document_type or 'Autre'}</span>
+                                <div>
+                                    <a href="/api/documents/${doc.id}/download" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Erreur lors du chargement des documents:', error);
+    }
+}
+
+async function addCompany() {
+    const form = document.getElementById('addCompanyForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const companyData = {
+        name: document.getElementById('companyName').value,
+        offer_amount: document.getElementById('companyAmount').value ? parseFloat(document.getElementById('companyAmount').value) : null,
+        rc_number: document.getElementById('companyRC').value,
+        if_number: document.getElementById('companyIF').value
+    };
+    
+    try {
+        const response = await fetch(`/api/markets/${marketId}/companies`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(companyData)
+        });
+        
+        if (response.ok) {
+            showNotification('Entreprise ajoutée avec succès', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addCompanyModal')).hide();
+            form.reset();
+            location.reload();
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de l\'ajout', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de l\'ajout de l\'entreprise', 'danger');
+    }
+}
+
+async function uploadDocument() {
+    const form = document.getElementById('uploadDocumentForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('market_id', marketId);
+    formData.append('name', document.getElementById('documentName').value);
+    formData.append('file', document.getElementById('documentFile').files[0]);
+    formData.append('document_type', document.getElementById('documentType').value);
+    formData.append('description', document.getElementById('documentDescription').value);
+    
+    try {
+        const response = await fetch('/api/documents/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            showNotification('Document uploadé avec succès', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('uploadDocumentModal')).hide();
+            form.reset();
+            loadDocuments();
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de l\'upload', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de l\'upload du document', 'danger');
+    }
+}
+
+function exportToPDF() {
+    window.location.href = `/api/exports/markets/${marketId}/pdf`;
+}
+
+function editMarket() {
+    // TODO: Implement edit functionality
+    showNotification('Fonctionnalité de modification à implémenter', 'info');
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadStages();
+    loadDocuments();
+});
+</script>
+{% endblock %}

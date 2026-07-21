@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Marchés - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Gestion des Marchés</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="exportToExcel()">
+            <i class="bi bi-file-earmark-excel"></i> Exporter Excel
+        </button>
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newMarketModal">
+            <i class="bi bi-plus-circle"></i> Nouveau marché
+        </button>
+    </div>
+</div>
+
+<!-- Filtres de recherche -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="searchForm" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="searchQuery" placeholder="Rechercher...">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tous les statuts</option>
+                    <option value="planifie">Planifié</option>
+                    <option value="en_cours">En cours</option>
+                    <option value="termine">Terminé</option>
+                    <option value="en_attente">En attente</option>
+                    <option value="en_retard">En retard</option>
+                    <option value="annule">Annulé</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="typeFilter">
+                    <option value="">Tous les types</option>
+                    <option value="travaux">Travaux</option>
+                    <option value="fournitures">Fournitures</option>
+                    <option value="services">Services</option>
+                    <option value="etudes">Études</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control" id="minAmount" placeholder="Montant min">
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control" id="maxAmount" placeholder="Montant max">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tableau des marchés -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Numéro</th>
+                        <th>Objet</th>
+                        <th>Maître d'ouvrage</th>
+                        <th>Type</th>
+                        <th>Montant</th>
+                        <th>Statut</th>
+                        <th>Progression</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="marketsTable">
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center" id="pagination">
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Modal Nouveau Marché -->
+<div class="modal fade" id="newMarketModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouveau Marché</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newMarketForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="marketNumber" class="form-label">Numéro du marché *</label>
+                            <input type="text" class="form-control" id="marketNumber" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="masterOfWork" class="form-label">Maître d'ouvrage *</label>
+                            <input type="text" class="form-control" id="masterOfWork" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="object" class="form-label">Objet du marché *</label>
+                        <textarea class="form-control" id="object" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="marketType" class="form-label">Type *</label>
+                            <select class="form-select" id="marketType" required>
+                                <option value="">Sélectionner...</option>
+                                <option value="travaux">Travaux</option>
+                                <option value="fournitures">Fournitures</option>
+                                <option value="services">Services</option>
+                                <option value="etudes">Études</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="procurementMethod" class="form-label">Mode de passation *</label>
+                            <select class="form-select" id="procurementMethod" required>
+                                <option value="">Sélectionner...</option>
+                                <option value="appel_offres_ouvert">Appel d'offres ouvert</option>
+                                <option value="appel_offres_restreint">Appel d'offres restreint</option>
+                                <option value="marche_negocie">Marché négocié</option>
+                                <option value="bon_commande">Bon de commande</option>
+                                <option value="marche_simplifie">Marché simplifié</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="estimatedAmount" class="form-label">Montant estimé (MAD) *</label>
+                            <input type="number" class="form-control" id="estimatedAmount" step="0.01" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="responsibleService" class="form-label">Service responsable</label>
+                            <input type="text" class="form-control" id="responsibleService">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="followUpResponsible" class="form-label">Responsable suivi</label>
+                            <input type="text" class="form-control" id="followUpResponsible">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="budget" class="form-label">Budget (MAD)</label>
+                            <input type="number" class="form-control" id="budget" step="0.01">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="credits" class="form-label">Crédits (MAD)</label>
+                            <input type="number" class="form-control" id="credits" step="0.01">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="createMarket()">Créer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+const pageSize = 20;
+
+async function loadMarkets(page = 1) {
+    currentPage = page;
+    
+    const searchQuery = document.getElementById('searchQuery').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const typeFilter = document.getElementById('typeFilter').value;
+    const minAmount = document.getElementById('minAmount').value;
+    const maxAmount = document.getElementById('maxAmount').value;
+    
+    let url = `/api/markets?skip=${(page - 1) * pageSize}&limit=${pageSize}`;
+    
+    if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+    if (statusFilter) url += `&status=${statusFilter}`;
+    if (typeFilter) url += `&market_type=${typeFilter}`;
+    if (minAmount) url += `&min_amount=${minAmount}`;
+    if (maxAmount) url += `&max_amount=${maxAmount}`;
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        renderMarketsTable(data.items);
+        renderPagination(data.total_pages);
+    } catch (error) {
+        console.error('Erreur lors du chargement des marchés:', error);
+        showNotification('Erreur lors du chargement des marchés', 'danger');
+    }
+}
+
+function renderMarketsTable(markets) {
+    const tbody = document.getElementById('marketsTable');
+    tbody.innerHTML = '';
+    
+    if (markets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Aucun marché trouvé</td></tr>';
+        return;
+    }
+    
+    markets.forEach(market => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${market.market_number}</strong></td>
+            <td>${market.object.substring(0, 40)}${market.object.length > 40 ? '...' : ''}</td>
+            <td>${market.master_of_work}</td>
+            <td><span class="badge bg-secondary">${market.market_type}</span></td>
+            <td>${formatAmount(market.estimated_amount)}</td>
+            <td><span class="badge badge-status bg-${getStatusColor(market.status)}">${market.status.replace('_', ' ')}</span></td>
+            <td>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar" role="progressbar" style="width: ${market.progress_percentage}%;">
+                        ${market.progress_percentage}%
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="btn-group">
+                    <a href="/markets/${market.id}" class="btn btn-sm btn-outline-primary btn-action">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <button class="btn btn-sm btn-outline-secondary btn-action" onclick="editMarket(${market.id})">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="deleteMarket(${market.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function renderPagination(totalPages) {
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    
+    if (totalPages <= 1) return;
+    
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" onclick="loadMarkets(${currentPage - 1}); return false;">Précédent</a>`;
+    pagination.appendChild(prevLi);
+    
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#" onclick="loadMarkets(${i}); return false;">${i}</a>`;
+        pagination.appendChild(li);
+    }
+    
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" onclick="loadMarkets(${currentPage + 1}); return false;">Suivant</a>`;
+    pagination.appendChild(nextLi);
+}
+
+async function createMarket() {
+    const form = document.getElementById('newMarketForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const marketData = {
+        market_number: document.getElementById('marketNumber').value,
+        object: document.getElementById('object').value,
+        master_of_work: document.getElementById('masterOfWork').value,
+        market_type: document.getElementById('marketType').value,
+        procurement_method: document.getElementById('procurementMethod').value,
+        estimated_amount: parseFloat(document.getElementById('estimatedAmount').value),
+        responsible_service: document.getElementById('responsibleService').value,
+        follow_up_responsible: document.getElementById('followUpResponsible').value,
+        budget: document.getElementById('budget').value ? parseFloat(document.getElementById('budget').value) : null,
+        credits: document.getElementById('credits').value ? parseFloat(document.getElementById('credits').value) : null
+    };
+    
+    try {
+        const response = await fetch('/api/markets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(marketData)
+        });
+        
+        if (response.ok) {
+            showNotification('Marché créé avec succès', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('newMarketModal')).hide();
+            form.reset();
+            loadMarkets();
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de la création', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de la création du marché', 'danger');
+    }
+}
+
+function editMarket(marketId) {
+    window.location.href = `/markets/${marketId}`;
+}
+
+async function deleteMarket(marketId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce marché ?')) return;
+    
+    try {
+        const response = await fetch(`/api/markets/${marketId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Marché supprimé avec succès', 'success');
+            loadMarkets();
+        } else {
+            showNotification('Erreur lors de la suppression', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de la suppression du marché', 'danger');
+    }
+}
+
+function exportToExcel() {
+    window.location.href = '/api/exports/markets/excel';
+}
+
+// Event listeners
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    loadMarkets(1);
+});
+
+// Initial load
+document.addEventListener('DOMContentLoaded', () => loadMarkets(1));
+</script>
+{% endblock %}

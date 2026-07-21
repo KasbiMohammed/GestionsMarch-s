@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de Bord - Président{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Tableau de Bord - Président de la Commune</h2>
+                <div>
+                    <span class="text-muted">Dernière mise à jour: </span>
+                    <span id="lastUpdate">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs Principaux -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Total Marchés</h5>
+                            <h2 id="totalMarkets">0</h2>
+                        </div>
+                        <i class="fas fa-file-contract fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Budget Engagé</h5>
+                            <h2 id="totalEngaged">0 MAD</h2>
+                        </div>
+                        <i class="fas fa-coins fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Montant Payé</h5>
+                            <h2 id="totalPaid">0 MAD</h2>
+                        </div>
+                        <i class="fas fa-money-bill-wave fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">En Retard</h5>
+                            <h2 id="marketsLate">0</h2>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques détaillées -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Répartition par Service</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="serviceChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Répartition par Entreprise</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="companyChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Évolution mensuelle -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Évolution Mensuelle des Marchés</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="evolutionChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertes et Marchés récents -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5 class="mb-0">Alertes Critiques</h5>
+                    <button class="btn btn-sm btn-outline-danger" onclick="viewAllAlerts()">
+                        Voir tout
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="alertsList">
+                        <!-- Rempli par JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5 class="mb-0">Marchés Récents</h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewAllMarkets()">
+                        Voir tout
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="recentMarkets">
+                        <!-- Rempli par JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cartographie des projets -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Cartographie des Projets par Zone</h5>
+                </div>
+                <div class="card-body">
+                    <div id="projectsMap" style="height: 400px;">
+                        <!-- Carte Leaflet -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let serviceChart, companyChart, evolutionChart;
+
+function loadDashboardData() {
+    fetch('/api/dashboard/president')
+        .then(response => response.json())
+        .then(data => {
+            updateKPIs(data);
+            updateCharts(data);
+            updateAlerts(data);
+            updateRecentMarkets(data);
+            updateMap(data);
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString('fr-FR');
+        });
+}
+
+function updateKPIs(data) {
+    document.getElementById('totalMarkets').textContent = data.total_markets;
+    document.getElementById('totalEngaged').textContent = formatCurrency(data.total_engaged);
+    document.getElementById('totalPaid').textContent = formatCurrency(data.total_paid);
+    document.getElementById('marketsLate').textContent = data.markets_late;
+}
+
+function updateCharts(data) {
+    // Graphique par service
+    const serviceCtx = document.getElementById('serviceChart').getContext('2d');
+    if (serviceChart) serviceChart.destroy();
+    
+    serviceChart = new Chart(serviceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(data.by_service),
+            datasets: [{
+                data: Object.values(data.by_service).map(s => s.count),
+                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Graphique par entreprise
+    const companyCtx = document.getElementById('companyChart').getContext('2d');
+    if (companyChart) companyChart.destroy();
+    
+    companyChart = new Chart(companyCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(data.by_company).slice(0, 5),
+            datasets: [{
+                label: 'Montant (MAD)',
+                data: Object.values(data.by_company).slice(0, 5).map(c => c.amount),
+                backgroundColor: '#007bff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    // Graphique d'évolution
+    const evolutionCtx = document.getElementById('evolutionChart').getContext('2d');
+    if (evolutionChart) evolutionChart.destroy();
+    
+    evolutionChart = new Chart(evolutionCtx, {
+        type: 'line',
+        data: {
+            labels: data.annual_evolution.map(e => getMonthName(e.month)),
+            datasets: [{
+                label: 'Nombre de marchés',
+                data: data.annual_evolution.map(e => e.count),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+function updateAlerts(data) {
+    const alertsList = document.getElementById('alertsList');
+    // Simuler des alertes pour l'exemple
+    alertsList.innerHTML = `
+        <div class="alert alert-danger alert-dismissible fade show">
+            <strong>Garantie expirante</strong> - Marché M-2024-001
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div class="alert alert-warning alert-dismissible fade show">
+            <strong>Délai dépassé</strong> - Marché M-2024-003
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+}
+
+function updateRecentMarkets(data) {
+    const recentMarkets = document.getElementById('recentMarkets');
+    recentMarkets.innerHTML = `
+        <div class="list-group">
+            <a href="#" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">M-2024-001 - Construction école</h6>
+                    <small>En cours</small>
+                </div>
+                <small class="text-muted">Service Technique - 2.5M MAD</small>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">M-2024-002 - Fournitures bureau</h6>
+                    <small>Attribué</small>
+                </div>
+                <small class="text-muted">Service Marchés - 150K MAD</small>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">M-2024-003 - Études techniques</h6>
+                    <small>En retard</small>
+                </div>
+                <small class="text-muted">Service Technique - 500K MAD</small>
+            </a>
+        </div>
+    `;
+}
+
+function updateMap(data) {
+    // Initialiser la carte Leaflet
+    const map = L.map('projectsMap').setView([31.7917, -7.0926], 12); // Coordonnées Marrakech
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Ajouter des marqueurs pour les projets
+    const locations = Object.keys(data.by_location);
+    locations.forEach((location, index) => {
+        const lat = 31.7917 + (index * 0.01);
+        const lng = -7.0926 + (index * 0.01);
+        
+        L.marker([lat, lng])
+            .addTo(map)
+            .bindPopup(`<b>${location}</b><br>${data.by_location[location].count} marchés`);
+    });
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(amount || 0);
+}
+
+function getMonthName(month) {
+    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    return months[month - 1];
+}
+
+function viewAllAlerts() {
+    window.location.href = '/alerts';
+}
+
+function viewAllMarkets() {
+    window.location.href = '/markets';
+}
+
+// Charger les données au démarrage
+document.addEventListener('DOMContentLoaded', loadDashboardData);
+
+// Rafraîchir toutes les 5 minutes
+setInterval(loadDashboardData, 300000);
+</script>
+{% endblock %}

@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Tableau de bord</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-download"></i> Exporter
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshDashboard()">
+            <i class="bi bi-arrow-clockwise"></i> Actualiser
+        </button>
+    </div>
+</div>
+
+<!-- Statistiques principales -->
+<div class="row" id="statsCards">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Marchés</h6>
+                        <h3 class="mb-0" id="totalMarkets">-</h3>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-list-check" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">En Cours</h6>
+                        <h3 class="mb-0" id="enCoursMarkets">-</h3>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-arrow-repeat" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">En Retard</h6>
+                        <h3 class="mb-0" id="enRetardMarkets">-</h3>
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Terminés</h6>
+                        <h3 class="mb-0" id="termineMarkets">-</h3>
+                    </div>
+                    <div class="text-info">
+                        <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Marchés par Statut</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Marchés par Type</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="typeChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Montants engagés -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Montants Engagés</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <p class="text-muted mb-1">Total Estimé</p>
+                        <h4 id="totalEstimated">-</h4>
+                    </div>
+                    <div class="col-6">
+                        <p class="text-muted mb-1">Total Définitif</p>
+                        <h4 id="totalDefinitive">-</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Progression Moyenne</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h2 id="avgProgress">-</h2>
+                    <p class="text-muted">Pourcentage de réalisation moyen</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Marchés récents -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Marchés Récents</h5>
+                <a href="/markets" class="btn btn-sm btn-primary">
+                    Voir tout <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Numéro</th>
+                                <th>Objet</th>
+                                <th>Type</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                                <th>Progression</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentMarketsTable">
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Étapes en retard -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Étapes en Retard</h5>
+                <span class="badge bg-danger" id="lateStagesCount">0</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Étape</th>
+                                <th>Marché</th>
+                                <th>Date Prévue</th>
+                                <th>Date Réelle</th>
+                                <th>Retard (jours)</th>
+                                <th>Alerte</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lateStagesTable">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let statusChart, typeChart;
+
+async function loadDashboardData() {
+    try {
+        // Charger les statistiques
+        const statsResponse = await fetch('/api/dashboard/statistics');
+        const stats = await statsResponse.json();
+        
+        // Mettre à jour les cartes de statistiques
+        document.getElementById('totalMarkets').textContent = stats.markets.total;
+        document.getElementById('enCoursMarkets').textContent = stats.markets.en_cours;
+        document.getElementById('enRetardMarkets').textContent = stats.markets.en_retard;
+        document.getElementById('termineMarkets').textContent = stats.markets.termine;
+        
+        document.getElementById('totalEstimated').textContent = formatAmount(stats.amounts.total_estimated);
+        document.getElementById('totalDefinitive').textContent = formatAmount(stats.amounts.total_definitive);
+        document.getElementById('avgProgress').textContent = stats.progress.average.toFixed(1) + '%';
+        
+        // Charger les données pour les graphiques
+        const statusResponse = await fetch('/api/dashboard/markets-by-status');
+        const statusData = await statusResponse.json();
+        
+        const typeResponse = await fetch('/api/dashboard/markets-by-type');
+        const typeData = await typeResponse.json();
+        
+        // Créer le graphique par statut
+        createStatusChart(statusData);
+        
+        // Créer le graphique par type
+        createTypeChart(typeData);
+        
+        // Charger les marchés récents
+        loadRecentMarkets();
+        
+        // Charger les étapes en retard
+        loadLateStages();
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement des données:', error);
+        showNotification('Erreur lors du chargement des données', 'danger');
+    }
+}
+
+function createStatusChart(data) {
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    
+    if (statusChart) {
+        statusChart.destroy();
+    }
+    
+    statusChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(data).map(key => key.replace('_', ' ').toUpperCase()),
+            datasets: [{
+                data: Object.values(data),
+                backgroundColor: [
+                    '#0d6efd',
+                    '#198754',
+                    '#ffc107',
+                    '#dc3545',
+                    '#6c757d',
+                    '#0dcaf0'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function createTypeChart(data) {
+    const ctx = document.getElementById('typeChart').getContext('2d');
+    
+    if (typeChart) {
+        typeChart.destroy();
+    }
+    
+    typeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(data).map(key => key.replace('_', ' ').toUpperCase()),
+            datasets: [{
+                label: 'Nombre de marchés',
+                data: Object.values(data),
+                backgroundColor: '#0d6efd'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function loadRecentMarkets() {
+    try {
+        const response = await fetch('/api/dashboard/recent-markets?limit=5');
+        const markets = await response.json();
+        
+        const tbody = document.getElementById('recentMarketsTable');
+        tbody.innerHTML = '';
+        
+        if (markets.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Aucun marché récent</td></tr>';
+            return;
+        }
+        
+        markets.forEach(market => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${market.market_number}</strong></td>
+                <td>${market.object.substring(0, 50)}${market.object.length > 50 ? '...' : ''}</td>
+                <td><span class="badge bg-secondary">${market.market_type}</span></td>
+                <td>${formatAmount(market.estimated_amount)}</td>
+                <td><span class="badge badge-status bg-${getStatusColor(market.status)}">${market.status}</span></td>
+                <td>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" role="progressbar" style="width: ${market.progress_percentage}%;">
+                            ${market.progress_percentage}%
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <a href="/markets/${market.id}" class="btn btn-sm btn-outline-primary btn-action">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des marchés récents:', error);
+    }
+}
+
+async function loadLateStages() {
+    try {
+        const response = await fetch('/api/dashboard/late-stages?limit=5');
+        const stages = await response.json();
+        
+        const tbody = document.getElementById('lateStagesTable');
+        tbody.innerHTML = '';
+        
+        document.getElementById('lateStagesCount').textContent = stages.length;
+        
+        if (stages.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Aucune étape en retard</td></tr>';
+            return;
+        }
+        
+        stages.forEach(stage => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${stage.name}</strong></td>
+                <td>ID: ${stage.market_id}</td>
+                <td>${formatDate(stage.planned_date)}</td>
+                <td>${formatDate(stage.actual_date)}</td>
+                <td><span class="badge bg-danger">${stage.delay_days} jours</span></td>
+                <td><span class="badge alert-level-${stage.alert_level}">${stage.alert_level}</span></td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des étapes en retard:', error);
+    }
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'planifie': 'secondary',
+        'en_cours': 'primary',
+        'termine': 'success',
+        'en_attente': 'warning',
+        'en_retard': 'danger',
+        'annule': 'dark'
+    };
+    return colors[status] || 'secondary';
+}
+
+function refreshDashboard() {
+    loadDashboardData();
+}
+
+// Charger les données au démarrage
+document.addEventListener('DOMContentLoaded', loadDashboardData);
+</script>
+{% endblock %}
