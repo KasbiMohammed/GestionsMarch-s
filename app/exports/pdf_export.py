@@ -16,6 +16,7 @@ from typing import List
 import os
 
 from app.models.market import Market
+from app.models.market_planning import MarketPlanning
 
 
 def setup_pdf_document(filepath: str):
@@ -330,6 +331,140 @@ def generate_monthly_report(markets: List[Market], month: int, year: int, filepa
     story.append(Spacer(1, 2*cm))
     footer = Paragraph(
         f"Rapport généré automatiquement le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
+        styles['NormalRight']
+    )
+    story.append(footer)
+    
+    # Générer le PDF
+    doc.build(story)
+
+
+def create_planning_title_table(planning: MarketPlanning):
+    """
+    Crée un tableau avec les informations de titre de la planification
+    
+    Args:
+        planning: Objet MarketPlanning
+        
+    Returns:
+        Tableau ReportLab
+    """
+    data = [
+        ["Numéro de planification:", planning.planning_number, "Date:", datetime.now().strftime("%d/%m/%Y")],
+        ["Intitulé:", planning.title, "", ""],
+        ["Exercice:", str(planning.fiscal_year), "Statut:", planning.status.value if planning.status else ""],
+    ]
+    
+    table = Table(data, colWidths=[4*cm, 8*cm, 2*cm, 4*cm])
+    table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+    ]))
+    
+    return table
+
+
+def create_planning_info_table(planning: MarketPlanning):
+    """
+    Crée un tableau avec les informations détaillées de la planification
+    
+    Args:
+        planning: Objet MarketPlanning
+        
+    Returns:
+        Tableau ReportLab
+    """
+    data = [
+        ["Informations Générales"],
+        ["Type de projet:", planning.project_type.value if planning.project_type else "N/A", "Type de procédure:", planning.procedure_type.value if planning.procedure_type else "N/A"],
+        ["Budget estimatif:", f"{planning.estimated_budget:,.2f} MAD" if planning.estimated_budget else "N/A", "Source financement:", planning.funding_source or "N/A"],
+        ["Service demandeur:", planning.requesting_service_name or "N/A", "Responsable:", planning.responsible_name or "N/A"],
+        ["Priorité:", planning.priority.value if planning.priority else "N/A", "", ""],
+        ["", "", "", ""],
+        ["Calendrier Prévisionnel"],
+        ["Lancement:", planning.launch_date.strftime("%d/%m/%Y") if planning.launch_date else "N/A", "Ouverture des plis:", planning.bid_opening_date.strftime("%d/%m/%Y") if planning.bid_opening_date else "N/A"],
+        ["Attribution:", planning.attribution_date.strftime("%d/%m/%Y") if planning.attribution_date else "N/A", "Notification:", planning.notification_date.strftime("%d/%m/%Y") if planning.notification_date else "N/A"],
+        ["Ordre de service:", planning.service_order_date.strftime("%d/%m/%Y") if planning.service_order_date else "N/A", "Début:", planning.start_date.strftime("%d/%m/%Y") if planning.start_date else "N/A"],
+        ["Fin:", planning.end_date.strftime("%d/%m/%Y") if planning.end_date else "N/A", "", ""],
+    ]
+    
+    table = Table(data, colWidths=[4*cm, 4*cm, 4*cm, 4*cm])
+    table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BACKGROUND', (0, 0), (3, 0), colors.lightblue),
+        ('BACKGROUND', (0, 6), (3, 6), colors.lightblue),
+        ('FONTNAME', (0, 0), (3, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 6), (3, 6), 'Helvetica-Bold'),
+        ('SPAN', (0, 0), (3, 0)),
+        ('SPAN', (0, 6), (3, 6)),
+    ]))
+    
+    return table
+
+
+def export_planning_to_pdf(planning: MarketPlanning, filepath: str):
+    """
+    Exporte une planification vers un fichier PDF
+    
+    Args:
+        planning: Objet MarketPlanning à exporter
+        filepath: Chemin du fichier PDF de sortie
+    """
+    doc, styles = setup_pdf_document(filepath)
+    story = []
+    
+    # Titre
+    title = Paragraph("Fiche de Planification de Marché", styles['Title'])
+    story.append(title)
+    story.append(Spacer(1, 0.5*cm))
+    
+    # Tableau de titre
+    title_table = create_planning_title_table(planning)
+    story.append(title_table)
+    story.append(Spacer(1, 1*cm))
+    
+    # Informations générales
+    subtitle = Paragraph("Informations de la Planification", styles['Subtitle'])
+    story.append(subtitle)
+    story.append(Spacer(1, 0.3*cm))
+    
+    info_table = create_planning_info_table(planning)
+    story.append(info_table)
+    story.append(Spacer(1, 1*cm))
+    
+    # Description
+    if planning.description:
+        subtitle = Paragraph("Description", styles['Subtitle'])
+        story.append(subtitle)
+        story.append(Spacer(1, 0.3*cm))
+        
+        desc_paragraph = Paragraph(planning.description, styles['Normal'])
+        story.append(desc_paragraph)
+        story.append(Spacer(1, 1*cm))
+    
+    # Observations
+    if planning.observations:
+        subtitle = Paragraph("Observations", styles['Subtitle'])
+        story.append(subtitle)
+        story.append(Spacer(1, 0.3*cm))
+        
+        obs_paragraph = Paragraph(planning.observations, styles['Normal'])
+        story.append(obs_paragraph)
+    
+    # Pied de page
+    story.append(Spacer(1, 2*cm))
+    footer = Paragraph(
+        f"Document généré automatiquement le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
         styles['NormalRight']
     )
     story.append(footer)

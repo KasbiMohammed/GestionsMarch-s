@@ -12,40 +12,45 @@ ROLE_PERMISSIONS = {
     UserRole.ADMINISTRATEUR: {
         "create_markets", "edit_markets", "delete_markets", "validate_markets",
         "view_all_markets", "manage_users", "export_data", "view_reports",
-        "manage_documents", "view_analytics", "manage_settings"
+        "manage_documents", "view_analytics", "manage_settings",
+        "create_planning", "edit_planning", "delete_planning", "view_planning",
     },
     
     UserRole.PRESIDENT: {
         "view_all_markets", "validate_markets", "view_reports", "export_data",
-        "view_analytics"
+        "view_analytics", "view_planning",
     },
     
     UserRole.DIRECTEUR_GENERAL_SERVICES: {
         "create_markets", "edit_markets", "validate_markets", "view_all_markets",
-        "view_reports", "export_data", "manage_documents", "view_analytics"
+        "view_reports", "export_data", "manage_documents", "view_analytics",
+        "create_planning", "edit_planning", "view_planning",
     },
     
     UserRole.SERVICE_MARCHES: {
         "create_markets", "edit_markets", "view_all_markets", "manage_documents",
-        "view_reports", "export_data"
+        "view_reports", "export_data",
+        "create_planning", "edit_planning", "delete_planning", "view_planning",
     },
     
     UserRole.SERVICE_TECHNIQUE: {
         "edit_markets", "view_all_markets", "validate_technical", "manage_documents",
-        "view_reports"
+        "view_reports", "create_planning", "edit_planning", "view_planning",
     },
     
     UserRole.SERVICE_FINANCIER: {
         "edit_markets", "view_all_markets", "validate_financial", "manage_documents",
-        "view_reports", "export_data"
+        "view_reports", "export_data",
+        "view_planning", "edit_planning",
     },
     
     UserRole.CONTROLE_INTERNE: {
-        "view_all_markets", "view_reports", "export_data", "view_analytics"
+        "view_all_markets", "view_reports", "export_data", "view_analytics",
+        "view_planning",
     },
     
     UserRole.CONSULTATION: {
-        "view_all_markets", "view_reports", "export_data"
+        "view_all_markets", "view_reports", "export_data", "view_planning",
     }
 }
 
@@ -130,3 +135,23 @@ def can_export_data(user_role: UserRole) -> bool:
 def can_manage_documents(user_role: UserRole) -> bool:
     """Vérifie si l'utilisateur peut gérer les documents"""
     return has_permission(user_role, "manage_documents")
+
+
+def can_create_planning(user_role: UserRole) -> bool:
+    """Vérifie si l'utilisateur peut créer des planifications"""
+    return has_permission(user_role, "create_planning")
+
+
+def can_edit_planning(user_role: UserRole) -> bool:
+    """Vérifie si l'utilisateur peut modifier des planifications"""
+    return has_permission(user_role, "edit_planning")
+
+
+def can_delete_planning(user_role: UserRole) -> bool:
+    """Vérifie si l'utilisateur peut supprimer des planifications"""
+    return has_permission(user_role, "delete_planning")
+
+
+def can_view_planning(user_role: UserRole) -> bool:
+    """Vérifie si l'utilisateur peut consulter les planifications"""
+    return has_permission(user_role, "view_planning")

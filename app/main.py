@@ -14,7 +14,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from app.config import settings
 from app.database import engine, get_db, init_db
-from app.api import auth, users, markets, stages, documents, dashboard, search, exports, analysis
+from app.api import auth, users, markets, stages, documents, dashboard, search, exports, analysis, market_planning
 
 # Création de l'application FastAPI
 app = FastAPI(
@@ -39,7 +39,6 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 
 # Configuration des templates Jinja2
 templates = Jinja2Templates(directory="app/templates")
-
 
 # Événements de démarrage et d'arrêt
 @app.on_event("startup")
@@ -152,6 +151,7 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"]
 app.include_router(search.router, prefix="/api/search", tags=["Search"])
 app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["Analysis"])
+app.include_router(market_planning.router, prefix="/api/market-planning", tags=["Market Planning"])
 
 
 # Routes pages HTML
@@ -211,6 +211,107 @@ async def analysis_page(request: Request, db: Session = Depends(get_db)):
     
     user = get_current_user_from_token(access_token, db)
     return templates.TemplateResponse("markets/analysis.html", {"request": request, "user": user})
+
+
+@app.get("/planification", response_class=HTMLResponse)
+async def planification_page(request: Request, db: Session = Depends(get_db)):
+    """Page de gestion de la planification des marchés"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("planification/list.html", {"request": request, "user": user})
+
+
+@app.get("/planification/new", response_class=HTMLResponse)
+async def planification_new_page(request: Request, db: Session = Depends(get_db)):
+    """Page de création d'une planification"""
+    from app.api.auth import get_current_user_from_token
+    from app.models.annual_planning import Service
+    from app.models.user import User
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    services = db.query(Service).order_by(Service.name).all()
+    users = db.query(User).filter(User.is_active == True).order_by(User.full_name).all()
+    
+    return templates.TemplateResponse(
+        "planification/form.html",
+        {
+            "request": request,
+            "user": user,
+            "planning": None,
+            "services": services,
+            "users": users,
+            "current_year": 2025
+        }
+    )
+
+
+@app.get("/planification/{planning_id}", response_class=HTMLResponse)
+async def planification_detail_page(request: Request, planning_id: int, db: Session = Depends(get_db)):
+    """Page de détail d'une planification"""
+    from app.api.auth import get_current_user_from_token
+    from app.models.market_planning import MarketPlanning
+    from app.schemas.market_planning import MarketPlanningResponse
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    planning = db.query(MarketPlanning).filter(MarketPlanning.id == planning_id).first()
+    
+    if not planning:
+        return templates.TemplateResponse("planification/list.html", {"request": request, "user": user})
+    
+    # Convertir l'objet SQLAlchemy en dictionnaire via le schéma Pydantic
+    planning_dict = MarketPlanningResponse.model_validate(planning).model_dump()
+    
+    return templates.TemplateResponse(
+        "planification/detail.html",
+        {"request": request, "user": user, "planning": planning_dict}
+    )
+
+
+@app.get("/planification/{planning_id}/edit", response_class=HTMLResponse)
+async def planification_edit_page(request: Request, planning_id: int, db: Session = Depends(get_db)):
+    """Page de modification d'une planification"""
+    from app.api.auth import get_current_user_from_token
+    from app.models.market_planning import MarketPlanning
+    from app.models.annual_planning import Service
+    from app.models.user import User
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    planning = db.query(MarketPlanning).filter(MarketPlanning.id == planning_id).first()
+    
+    if not planning:
+        return templates.TemplateResponse("planification/list.html", {"request": request, "user": user})
+    
+    services = db.query(Service).order_by(Service.name).all()
+    users = db.query(User).filter(User.is_active == True).order_by(User.full_name).all()
+    
+    return templates.TemplateResponse(
+        "planification/form.html",
+        {
+            "request": request,
+            "user": user,
+            "planning": planning,
+            "services": services,
+            "users": users,
+            "current_year": planning.fiscal_year
+        }
+    )
 
 
 if __name__ == "__main__":

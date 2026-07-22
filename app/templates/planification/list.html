@@ -1,0 +1,1021 @@
+{% extends "base.html" %}
+
+{% block title %}Planification des Marchés{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Planification des Marchés</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="exportExcel()">
+            <i class="bi bi-file-earmark-excel"></i> Export Excel
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="exportPDF()">
+            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+        </button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="showCreateModal()">
+            <i class="bi bi-plus-circle"></i> Nouvelle Planification
+        </button>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Recherche</label>
+                <input type="text" class="form-control" id="searchInput" placeholder="N°, titre, service...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Exercice</label>
+                <select class="form-select" id="fiscalYearFilter">
+                    <option value="">Tous</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Type de projet</label>
+                <select class="form-select" id="projectTypeFilter">
+                    <option value="">Tous</option>
+                    <option value="travaux">Travaux</option>
+                    <option value="fournitures">Fournitures</option>
+                    <option value="services">Services</option>
+                    <option value="prestations_intellectuelles">Prestations intellectuelles</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Procédure</label>
+                <select class="form-select" id="procedureTypeFilter">
+                    <option value="">Toutes</option>
+                    <option value="bon_commande">Bon de commande</option>
+                    <option value="marche_simplifie">Marché simplifié</option>
+                    <option value="ao_ouvert">AO ouvert</option>
+                    <option value="ao_restreint">AO restreint</option>
+                    <option value="consultation">Consultation</option>
+                    <option value="procedure_negociee">Procédure négociée</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Statut</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tous</option>
+                    <option value="brouillon">Brouillon</option>
+                    <option value="en_preparation">En préparation</option>
+                    <option value="validee">Validée</option>
+                    <option value="programmee">Programmée</option>
+                    <option value="annulee">Annulée</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Priorité</label>
+                <select class="form-select" id="priorityFilter">
+                    <option value="">Toutes</option>
+                    <option value="faible">Faible</option>
+                    <option value="moyenne">Moyenne</option>
+                    <option value="haute">Haute</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-2">
+                <label class="form-label">Service</label>
+                <select class="form-select" id="serviceFilter">
+                    <option value="">Tous</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Tri par</label>
+                <select class="form-select" id="sortBy">
+                    <option value="created_at">Date de création</option>
+                    <option value="planning_number">Numéro</option>
+                    <option value="title">Titre</option>
+                    <option value="estimated_budget">Budget</option>
+                    <option value="launch_date">Date lancement</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Ordre</label>
+                <select class="form-select" id="sortOrder">
+                    <option value="desc">Décroissant</option>
+                    <option value="asc">Croissant</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-primary w-100" onclick="applyFilters()">
+                    <i class="bi bi-filter"></i> Filtrer
+                </button>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                    <i class="bi bi-x-circle"></i> Réinitialiser
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques rapides -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Planifications</h6>
+                        <h3 class="mb-0" id="totalCount">-</h3>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-calendar-check" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Budget Prévisionnel</h6>
+                        <h3 class="mb-0" id="totalBudget">-</h3>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-currency-euro" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Validées</h6>
+                        <h3 class="mb-0" id="validatedCount">-</h3>
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Programmées</h6>
+                        <h3 class="mb-0" id="programmedCount">-</h3>
+                    </div>
+                    <div class="text-info">
+                        <i class="bi bi-calendar-event" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau des planifications -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>N° Planification</th>
+                        <th>Exercice</th>
+                        <th>Intitulé</th>
+                        <th>Type Projet</th>
+                        <th>Procédure</th>
+                        <th>Budget</th>
+                        <th>Service</th>
+                        <th>Priorité</th>
+                        <th>Statut</th>
+                        <th>Date Lancement</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="planningsTable">
+                    <tr>
+                        <td colspan="11" class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Pagination" id="paginationNav">
+            <ul class="pagination justify-content-center" id="pagination">
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Modal Création/Modification -->
+<div class="modal fade" id="planningModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Nouvelle Planification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="planningForm">
+                    <input type="hidden" id="planningId">
+                    
+                    <!-- Section Informations générales -->
+                    <h6 class="mb-3 text-primary">Informations générales</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label">Numéro de planification *</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="planningNumber" required>
+                                <button type="button" class="btn btn-outline-secondary" onclick="generateNumber()">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Exercice/Année *</label>
+                            <input type="number" class="form-control" id="fiscalYear" min="2000" max="2100" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Intitulé *</label>
+                            <input type="text" class="form-control" id="title" required maxlength="300">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="description" rows="3"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Section Type et procédure -->
+                    <h6 class="mb-3 text-primary">Type et procédure</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Type de projet *</label>
+                            <select class="form-select" id="projectType" required>
+                                <option value="">Sélectionner...</option>
+                                <option value="travaux">Travaux</option>
+                                <option value="fournitures">Fournitures</option>
+                                <option value="services">Services</option>
+                                <option value="prestations_intellectuelles">Prestations intellectuelles</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Type de procédure *</label>
+                            <select class="form-select" id="procedureType" required>
+                                <option value="">Sélectionner...</option>
+                                <option value="bon_commande">Bon de commande</option>
+                                <option value="marche_simplifie">Marché simplifié</option>
+                                <option value="ao_ouvert">AO ouvert</option>
+                                <option value="ao_restreint">AO restreint</option>
+                                <option value="consultation">Consultation</option>
+                                <option value="procedure_negociee">Procédure négociée</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Section Budget et financement -->
+                    <h6 class="mb-3 text-primary">Budget et financement</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Budget estimatif (MAD) *</label>
+                            <input type="number" class="form-control" id="estimatedBudget" min="0" step="0.01" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Source de financement</label>
+                            <input type="text" class="form-control" id="fundingSource" maxlength="200">
+                        </div>
+                    </div>
+                    
+                    <!-- Section Service et responsable -->
+                    <h6 class="mb-3 text-primary">Service et responsable</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Service demandeur</label>
+                            <select class="form-select" id="requestingServiceId">
+                                <option value="">Sélectionner...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Service demandeur (nom)</label>
+                            <input type="text" class="form-control" id="requestingServiceName" maxlength="200">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Responsable</label>
+                            <select class="form-select" id="responsibleId">
+                                <option value="">Sélectionner...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Responsable (nom)</label>
+                            <input type="text" class="form-control" id="responsibleName" maxlength="200">
+                        </div>
+                    </div>
+                    
+                    <!-- Section Priorité et statut -->
+                    <h6 class="mb-3 text-primary">Priorité et statut</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Priorité</label>
+                            <select class="form-select" id="priority">
+                                <option value="moyenne">Moyenne</option>
+                                <option value="faible">Faible</option>
+                                <option value="haute">Haute</option>
+                                <option value="urgente">Urgente</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Statut</label>
+                            <select class="form-select" id="status">
+                                <option value="brouillon">Brouillon</option>
+                                <option value="en_preparation">En préparation</option>
+                                <option value="validee">Validée</option>
+                                <option value="programmee">Programmée</option>
+                                <option value="annulee">Annulée</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Section Dates prévisionnelles -->
+                    <h6 class="mb-3 text-primary">Dates prévisionnelles</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Lancement</label>
+                            <input type="date" class="form-control" id="launchDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ouverture des plis</label>
+                            <input type="date" class="form-control" id="bidOpeningDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Attribution</label>
+                            <input type="date" class="form-control" id="attributionDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Notification</label>
+                            <input type="date" class="form-control" id="notificationDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ordre de service</label>
+                            <input type="date" class="form-control" id="serviceOrderDate">
+                        </div>
+                        <div class="col-md-4"></div>
+                        <div class="col-md-4">
+                            <label class="form-label">Début</label>
+                            <input type="date" class="form-control" id="startDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fin</label>
+                            <input type="date" class="form-control" id="endDate">
+                        </div>
+                    </div>
+                    
+                    <!-- Section Observations -->
+                    <h6 class="mb-3 text-primary">Observations</h6>
+                    <div class="mb-4">
+                        <label class="form-label">Observations</label>
+                        <textarea class="form-control" id="observations" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="savePlanning()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Documents -->
+<div class="modal fade" id="documentsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Documents joints</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="input-group">
+                        <input type="file" class="form-control" id="documentFile">
+                        <input type="text" class="form-control" id="documentName" placeholder="Nom du document">
+                        <button type="button" class="btn btn-primary" onclick="uploadDocument()">
+                            <i class="bi bi-upload"></i> Ajouter
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Fichier</th>
+                                <th>Taille</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documentsTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmation suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmation de suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer cette planification ?</p>
+                <p class="text-danger">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let pageSize = 20;
+let totalPages = 1;
+let currentDeleteId = null;
+let currentPlanningId = null;
+
+// Charger les données au démarrage
+document.addEventListener('DOMContentLoaded', function() {
+    loadServices();
+    loadUsers();
+    loadPlannings();
+    loadStatistics();
+});
+
+// Charger les services
+async function loadServices() {
+    try {
+        const response = await fetch('/api/market-planning/services');
+        const services = await response.json();
+        
+        const serviceFilter = document.getElementById('serviceFilter');
+        const requestingServiceId = document.getElementById('requestingServiceId');
+        
+        services.forEach(service => {
+            serviceFilter.innerHTML += `<option value="${service.id}">${service.name}</option>`;
+            requestingServiceId.innerHTML += `<option value="${service.id}">${service.name}</option>`;
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des services:', error);
+    }
+}
+
+// Charger les utilisateurs
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/users');
+        const users = await response.json();
+        
+        const responsibleId = document.getElementById('responsibleId');
+        
+        users.forEach(user => {
+            responsibleId.innerHTML += `<option value="${user.id}">${user.full_name}</option>`;
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des utilisateurs:', error);
+    }
+}
+
+// Charger les planifications
+async function loadPlannings() {
+    const data = await response.json();
+
+    console.log("Réponse API planification :", data);
+    try {
+        const params = new URLSearchParams({
+            skip: (currentPage - 1) * pageSize,
+            limit: pageSize,
+            search: document.getElementById('searchInput').value,
+            fiscal_year: document.getElementById('fiscalYearFilter').value,
+            project_type: document.getElementById('projectTypeFilter').value,
+            procedure_type: document.getElementById('procedureTypeFilter').value,
+            status: document.getElementById('statusFilter').value,
+            priority: document.getElementById('priorityFilter').value,
+            requesting_service_id: document.getElementById('serviceFilter').value,
+            sort_by: document.getElementById('sortBy').value,
+            sort_order: document.getElementById('sortOrder').value
+        });
+        
+        const response = await fetch(`/api/market-planning/?${params}`);
+        const data = await response.json();
+        
+        displayPlannings(data.items);
+        updatePagination(data.total, data.page, data.page_size, data.total_pages);
+    } catch (error) {
+        console.error('Erreur lors du chargement des planifications:', error);
+        showNotification('Erreur lors du chargement des données', 'danger');
+    }
+}
+
+// Afficher les planifications
+function displayPlannings(plannings) {
+    const tbody = document.getElementById('planningsTable');
+    tbody.innerHTML = '';
+    
+    if (plannings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center">Aucune planification trouvée</td></tr>';
+        return;
+    }
+    
+    plannings.forEach(planning => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${planning.planning_number}</strong></td>
+            <td>${planning.fiscal_year}</td>
+            <td>${planning.title.substring(0, 50)}${planning.title.length > 50 ? '...' : ''}</td>
+            <td><span class="badge bg-secondary">${getProjectTypeLabel(planning.project_type)}</span></td>
+            <td><span class="badge bg-info">${getProcedureTypeLabel(planning.procedure_type)}</span></td>
+            <td>${formatAmount(planning.estimated_budget)}</td>
+            <td>${planning.requesting_service_name || '-'}</td>
+            <td><span class="badge bg-${getPriorityColor(planning.priority)}">${getPriorityLabel(planning.priority)}</span></td>
+            <td><span class="badge bg-${getStatusColor(planning.status)}">${getStatusLabel(planning.status)}</span></td>
+            <td>${formatDate(planning.launch_date)}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="viewPlanning(${planning.id})" title="Voir">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="editPlanning(${planning.id})" title="Modifier">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-info" onclick="showDocuments(${planning.id})" title="Documents">
+                        <i class="bi bi-file-earmark"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deletePlanning(${planning.id})" title="Supprimer">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Mettre à jour la pagination
+function updatePagination(total, page, pageSize, totalPages) {
+    currentPage = page;
+    this.totalPages = totalPages;
+    
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    
+    // Bouton précédent
+    pagination.innerHTML += `
+        <li class="page-item ${page === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${page - 1})">Précédent</a>
+        </li>
+    `;
+    
+    // Pages
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
+            pagination.innerHTML += `
+                <li class="page-item ${i === page ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>
+                </li>
+            `;
+        } else if (i === page - 3 || i === page + 3) {
+            pagination.innerHTML += '<li class="page-item disabled"><a class="page-link">...</a></li>';
+        }
+    }
+    
+    // Bouton suivant
+    pagination.innerHTML += `
+        <li class="page-item ${page === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${page + 1})">Suivant</a>
+        </li>
+    `;
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    loadPlannings();
+}
+
+// Charger les statistiques
+async function loadStatistics() {
+    try {
+        const response = await fetch('/api/market-planning/statistics');
+        const stats = await response.json();
+        
+        document.getElementById('totalCount').textContent = stats.total_count;
+        document.getElementById('totalBudget').textContent = formatAmount(stats.total_budget);
+        document.getElementById('validatedCount').textContent = stats.by_status.validee || 0;
+        document.getElementById('programmedCount').textContent = stats.by_status.programmee || 0;
+    } catch (error) {
+        console.error('Erreur lors du chargement des statistiques:', error);
+    }
+}
+
+// Appliquer les filtres
+function applyFilters() {
+    currentPage = 1;
+    loadPlannings();
+}
+
+// Réinitialiser les filtres
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('fiscalYearFilter').value = '';
+    document.getElementById('projectTypeFilter').value = '';
+    document.getElementById('procedureTypeFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('priorityFilter').value = '';
+    document.getElementById('serviceFilter').value = '';
+    document.getElementById('sortBy').value = 'created_at';
+    document.getElementById('sortOrder').value = 'desc';
+    currentPage = 1;
+    loadPlannings();
+}
+
+// Afficher le modal de création
+function showCreateModal() {
+    document.getElementById('modalTitle').textContent = 'Nouvelle Planification';
+    document.getElementById('planningForm').reset();
+    document.getElementById('planningId').value = '';
+    document.getElementById('fiscalYear').value = new Date().getFullYear();
+    generateNumber();
+    new bootstrap.Modal(document.getElementById('planningModal')).show();
+}
+
+// Générer un numéro de planification
+async function generateNumber() {
+    const fiscalYear = document.getElementById('fiscalYear').value;
+    if (!fiscalYear) return;
+    
+    try {
+        const response = await fetch(`/api/market-planning/generate-number?fiscal_year=${fiscalYear}`);
+        const data = await response.json();
+        document.getElementById('planningNumber').value = data.planning_number;
+    } catch (error) {
+        console.error('Erreur lors de la génération du numéro:', error);
+    }
+}
+
+// Enregistrer une planification
+async function savePlanning() {
+    const form = document.getElementById('planningForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const planningId = document.getElementById('planningId').value;
+    const isUpdate = planningId !== '';
+    
+    const data = {
+        planning_number: document.getElementById('planningNumber').value,
+        fiscal_year: parseInt(document.getElementById('fiscalYear').value),
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        project_type: document.getElementById('projectType').value,
+        procedure_type: document.getElementById('procedureType').value,
+        estimated_budget: parseFloat(document.getElementById('estimatedBudget').value),
+        funding_source: document.getElementById('fundingSource').value,
+        requesting_service_id: document.getElementById('requestingServiceId').value ? parseInt(document.getElementById('requestingServiceId').value) : null,
+        requesting_service_name: document.getElementById('requestingServiceName').value,
+        responsible_id: document.getElementById('responsibleId').value ? parseInt(document.getElementById('responsibleId').value) : null,
+        responsible_name: document.getElementById('responsibleName').value,
+        priority: document.getElementById('priority').value,
+        status: document.getElementById('status').value,
+        launch_date: document.getElementById('launchDate').value || null,
+        bid_opening_date: document.getElementById('bidOpeningDate').value || null,
+        attribution_date: document.getElementById('attributionDate').value || null,
+        notification_date: document.getElementById('notificationDate').value || null,
+        service_order_date: document.getElementById('serviceOrderDate').value || null,
+        start_date: document.getElementById('startDate').value || null,
+        end_date: document.getElementById('endDate').value || null,
+        observations: document.getElementById('observations').value
+    };
+    
+    try {
+        const url = isUpdate ? `/api/market-planning/${planningId}` : '/api/market-planning/';
+        const method = isUpdate ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('planningModal')).hide();
+            loadPlannings();
+            loadStatistics();
+            showNotification(isUpdate ? 'Planification modifiée avec succès' : 'Planification créée avec succès', 'success');
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de l\'enregistrement', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de l\'enregistrement:', error);
+        showNotification('Erreur lors de l\'enregistrement', 'danger');
+    }
+}
+
+// Modifier une planification
+async function editPlanning(id) {
+    try {
+        const response = await fetch(`/api/market-planning/${id}`);
+        const planning = await response.json();
+        
+        document.getElementById('modalTitle').textContent = 'Modifier la Planification';
+        document.getElementById('planningId').value = planning.id;
+        document.getElementById('planningNumber').value = planning.planning_number;
+        document.getElementById('fiscalYear').value = planning.fiscal_year;
+        document.getElementById('title').value = planning.title;
+        document.getElementById('description').value = planning.description || '';
+        document.getElementById('projectType').value = planning.project_type;
+        document.getElementById('procedureType').value = planning.procedure_type;
+        document.getElementById('estimatedBudget').value = planning.estimated_budget;
+        document.getElementById('fundingSource').value = planning.funding_source || '';
+        document.getElementById('requestingServiceId').value = planning.requesting_service_id || '';
+        document.getElementById('requestingServiceName').value = planning.requesting_service_name || '';
+        document.getElementById('responsibleId').value = planning.responsible_id || '';
+        document.getElementById('responsibleName').value = planning.responsible_name || '';
+        document.getElementById('priority').value = planning.priority;
+        document.getElementById('status').value = planning.status;
+        document.getElementById('launchDate').value = planning.launch_date ? planning.launch_date.split('T')[0] : '';
+        document.getElementById('bidOpeningDate').value = planning.bid_opening_date ? planning.bid_opening_date.split('T')[0] : '';
+        document.getElementById('attributionDate').value = planning.attribution_date ? planning.attribution_date.split('T')[0] : '';
+        document.getElementById('notificationDate').value = planning.notification_date ? planning.notification_date.split('T')[0] : '';
+        document.getElementById('serviceOrderDate').value = planning.service_order_date ? planning.service_order_date.split('T')[0] : '';
+        document.getElementById('startDate').value = planning.start_date ? planning.start_date.split('T')[0] : '';
+        document.getElementById('endDate').value = planning.end_date ? planning.end_date.split('T')[0] : '';
+        document.getElementById('observations').value = planning.observations || '';
+        
+        new bootstrap.Modal(document.getElementById('planningModal')).show();
+    } catch (error) {
+        console.error('Erreur lors du chargement de la planification:', error);
+        showNotification('Erreur lors du chargement', 'danger');
+    }
+}
+
+// Voir une planification
+function viewPlanning(id) {
+    window.location.href = `/planification/${id}`;
+}
+
+// Supprimer une planification
+function deletePlanning(id) {
+    currentDeleteId = id;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Confirmer la suppression
+async function confirmDelete() {
+    try {
+        const response = await fetch(`/api/market-planning/${currentDeleteId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            loadPlannings();
+            loadStatistics();
+            showNotification('Planification supprimée avec succès', 'success');
+        } else {
+            showNotification('Erreur lors de la suppression', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        showNotification('Erreur lors de la suppression', 'danger');
+    }
+}
+
+// Afficher les documents
+async function showDocuments(planningId) {
+    currentPlanningId = planningId;
+    try {
+        const response = await fetch(`/api/market-planning/${planningId}`);
+        const planning = await response.json();
+        
+        displayDocuments(planning.documents || []);
+        new bootstrap.Modal(document.getElementById('documentsModal')).show();
+    } catch (error) {
+        console.error('Erreur lors du chargement des documents:', error);
+    }
+}
+
+// Afficher les documents
+function displayDocuments(documents) {
+    const tbody = document.getElementById('documentsTable');
+    tbody.innerHTML = '';
+    
+    if (documents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Aucun document</td></tr>';
+        return;
+    }
+    
+    documents.forEach(doc => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${doc.name}</td>
+            <td>${doc.file_name}</td>
+            <td>${formatFileSize(doc.file_size)}</td>
+            <td>${formatDate(doc.uploaded_at)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="downloadDocument(${doc.id})">
+                    <i class="bi bi-download"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteDocument(${doc.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Télécharger un document
+function downloadDocument(docId) {
+    window.location.href = `/api/market-planning/documents/${docId}/download`;
+}
+
+// Supprimer un document
+async function deleteDocument(docId) {
+    try {
+        const response = await fetch(`/api/market-planning/documents/${docId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showDocuments(currentPlanningId);
+            showNotification('Document supprimé avec succès', 'success');
+        } else {
+            showNotification('Erreur lors de la suppression', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+    }
+}
+
+// Téléverser un document
+async function uploadDocument() {
+    const fileInput = document.getElementById('documentFile');
+    const nameInput = document.getElementById('documentName');
+    
+    if (!fileInput.files[0] || !nameInput.value) {
+        showNotification('Veuillez sélectionner un fichier et entrer un nom', 'warning');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('name', nameInput.value);
+    
+    try {
+        const response = await fetch(`/api/market-planning/${currentPlanningId}/documents`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            fileInput.value = '';
+            nameInput.value = '';
+            showDocuments(currentPlanningId);
+            showNotification('Document ajouté avec succès', 'success');
+        } else {
+            showNotification('Erreur lors de l\'ajout du document', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de l\'ajout:', error);
+    }
+}
+
+// Export Excel
+function exportExcel() {
+    window.location.href = '/api/exports/market-planning/excel';
+}
+
+// Export PDF
+function exportPDF() {
+    window.location.href = '/api/exports/market-planning/pdf';
+}
+
+// Fonctions utilitaires
+function getProjectTypeLabel(type) {
+    const labels = {
+        'travaux': 'Travaux',
+        'fournitures': 'Fournitures',
+        'services': 'Services',
+        'prestations_intellectuelles': 'Prestations intellectuelles'
+    };
+    return labels[type] || type;
+}
+
+function getProcedureTypeLabel(type) {
+    const labels = {
+        'bon_commande': 'Bon de commande',
+        'marche_simplifie': 'Marché simplifié',
+        'ao_ouvert': 'AO ouvert',
+        'ao_restreint': 'AO restreint',
+        'consultation': 'Consultation',
+        'procedure_negociee': 'Procédure négociée'
+    };
+    return labels[type] || type;
+}
+
+function getPriorityLabel(priority) {
+    const labels = {
+        'faible': 'Faible',
+        'moyenne': 'Moyenne',
+        'haute': 'Haute',
+        'urgente': 'Urgente'
+    };
+    return labels[priority] || priority;
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        'brouillon': 'Brouillon',
+        'en_preparation': 'En préparation',
+        'validee': 'Validée',
+        'programmee': 'Programmée',
+        'annulee': 'Annulée'
+    };
+    return labels[status] || status;
+}
+
+function getPriorityColor(priority) {
+    const colors = {
+        'faible': 'info',
+        'moyenne': 'primary',
+        'haute': 'warning',
+        'urgente': 'danger'
+    };
+    return colors[priority] || 'secondary';
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'brouillon': 'secondary',
+        'en_preparation': 'info',
+        'validee': 'success',
+        'programmee': 'primary',
+        'annulee': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '-';
+    const sizes = ['Octets', 'Ko', 'Mo', 'Go'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function formatAmount(amount) {
+    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(amount || 0);
+}
+
+function formatDate(date) {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('fr-FR');
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+</script>
+{% endblock %}

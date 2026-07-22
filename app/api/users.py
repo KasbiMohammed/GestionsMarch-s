@@ -12,7 +12,7 @@ from app.database import get_db
 from app.models.user import User, UserRole
 from app.schemas.user import UserResponse, UserUpdate
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter(tags=["Users"])
 
 
 @router.get("/", response_model=List[UserResponse])

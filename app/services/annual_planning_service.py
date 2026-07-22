@@ -6,7 +6,7 @@ Module 1: Planification annuelle des achats
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, func, sum as sql_sum
+from sqlalchemy import and_, func
 
 from app.models.annual_planning import (
     AnnualPlanning, ServiceNeed, BudgetEstimate, Service,

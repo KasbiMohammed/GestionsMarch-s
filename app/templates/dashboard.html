@@ -6,7 +6,13 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Tableau de bord</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <button type="button" class="btn btn-sm btn-outline-secondary me-2">
+        <a href="/planification/new" class="btn btn-sm btn-success me-2">
+            <i class="bi bi-plus-circle"></i> Nouvelle Planification
+        </a>
+        <a href="/markets/new" class="btn btn-sm btn-primary me-2">
+            <i class="bi bi-plus-circle"></i> Nouveau Marché
+        </a>
+        <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="exportDashboard()">
             <i class="bi bi-download"></i> Exporter
         </button>
         <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshDashboard()">
@@ -15,31 +21,46 @@
     </div>
 </div>
 
+<!-- Message si aucune donnée -->
+<div id="emptyStateMessage" class="alert alert-info d-none">
+    <h5><i class="bi bi-info-circle"></i> Bienvenue dans votre tableau de bord</h5>
+    <p>Votre base de données est actuellement vide. Commencez par créer votre première planification ou votre premier marché.</p>
+    <div class="mt-3">
+        <a href="/planification/new" class="btn btn-success me-2">
+            <i class="bi bi-calendar-plus"></i> Créer une Planification
+        </a>
+        <a href="/markets/new" class="btn btn-primary">
+            <i class="bi bi-file-earmark-plus"></i> Créer un Marché
+        </a>
+    </div>
+</div>
+
 <!-- Statistiques principales -->
 <div class="row" id="statsCards">
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card">
+        <div class="card stat-card border-primary">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">Total Marchés</h6>
-                        <h3 class="mb-0" id="totalMarkets">-</h3>
+                        <h3 class="mb-0 text-primary" id="totalMarkets">0</h3>
                     </div>
                     <div class="text-primary">
                         <i class="bi bi-list-check" style="font-size: 2rem;"></i>
                     </div>
                 </div>
+                <a href="/markets" class="stretched-link"></a>
             </div>
         </div>
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card success">
+        <div class="card stat-card border-success">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">En Cours</h6>
-                        <h3 class="mb-0" id="enCoursMarkets">-</h3>
+                        <h3 class="mb-0 text-success" id="enCoursMarkets">0</h3>
                     </div>
                     <div class="text-success">
                         <i class="bi bi-arrow-repeat" style="font-size: 2rem;"></i>
@@ -50,12 +71,12 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card warning">
+        <div class="card stat-card border-warning">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">En Retard</h6>
-                        <h3 class="mb-0" id="enRetardMarkets">-</h3>
+                        <h3 class="mb-0 text-warning" id="enRetardMarkets">0</h3>
                     </div>
                     <div class="text-warning">
                         <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
@@ -66,16 +87,63 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card info">
+        <div class="card stat-card border-info">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">Terminés</h6>
-                        <h3 class="mb-0" id="termineMarkets">-</h3>
+                        <h3 class="mb-0 text-info" id="termineMarkets">0</h3>
                     </div>
                     <div class="text-info">
                         <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques Planification -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Planification des Marchés</h5>
+                <a href="/planification" class="btn btn-sm btn-outline-primary">
+                    Voir tout <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center p-3 border rounded">
+                            <h6 class="text-muted mb-2">Total Planifications</h6>
+                            <h3 class="mb-0 text-primary" id="planningTotal">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 border rounded">
+                            <h6 class="text-muted mb-2">Budget Prévisionnel</h6>
+                            <h3 class="mb-0 text-success" id="planningBudget">0,00 MAD</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 border rounded">
+                            <h6 class="text-muted mb-2">Validées</h6>
+                            <h3 class="mb-0 text-warning" id="planningValidated">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 border rounded">
+                            <h6 class="text-muted mb-2">Programmées</h6>
+                            <h3 class="mb-0 text-info" id="planningProgrammed">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 text-center" id="planningEmptyActions">
+                    <a href="/planification/new" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Créer une Planification
+                    </a>
                 </div>
             </div>
         </div>
@@ -89,8 +157,13 @@
             <div class="card-header">
                 <h5 class="mb-0">Marchés par Statut</h5>
             </div>
-            <div class="card-body">
-                <canvas id="statusChart" height="300"></canvas>
+            <div class="card-body position-relative" style="min-height: 300px;">
+                <canvas id="statusChart"></canvas>
+                <div id="statusChartEmpty" class="position-absolute top-50 start-50 translate-middle text-center d-none">
+                    <i class="bi bi-pie-chart text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2">Aucun marché à afficher</p>
+                    <a href="/markets/new" class="btn btn-sm btn-primary">Créer un marché</a>
+                </div>
             </div>
         </div>
     </div>
@@ -100,8 +173,13 @@
             <div class="card-header">
                 <h5 class="mb-0">Marchés par Type</h5>
             </div>
-            <div class="card-body">
-                <canvas id="typeChart" height="300"></canvas>
+            <div class="card-body position-relative" style="min-height: 300px;">
+                <canvas id="typeChart"></canvas>
+                <div id="typeChartEmpty" class="position-absolute top-50 start-50 translate-middle text-center d-none">
+                    <i class="bi bi-bar-chart text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2">Aucun marché à afficher</p>
+                    <a href="/markets/new" class="btn btn-sm btn-primary">Créer un marché</a>
+                </div>
             </div>
         </div>
     </div>
@@ -116,13 +194,13 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-6">
+                    <div class="col-6 text-center border-end">
                         <p class="text-muted mb-1">Total Estimé</p>
-                        <h4 id="totalEstimated">-</h4>
+                        <h4 class="text-primary" id="totalEstimated">0,00 MAD</h4>
                     </div>
-                    <div class="col-6">
+                    <div class="col-6 text-center">
                         <p class="text-muted mb-1">Total Définitif</p>
-                        <h4 id="totalDefinitive">-</h4>
+                        <h4 class="text-success" id="totalDefinitive">0,00 MAD</h4>
                     </div>
                 </div>
             </div>
@@ -136,8 +214,12 @@
             </div>
             <div class="card-body">
                 <div class="text-center">
-                    <h2 id="avgProgress">-</h2>
+                    <h2 class="text-primary" id="avgProgress">0%</h2>
                     <p class="text-muted">Pourcentage de réalisation moyen</p>
+                    <div class="progress mt-3" style="height: 25px;">
+                        <div id="avgProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%;">0%</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -150,9 +232,14 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Marchés Récents</h5>
-                <a href="/markets" class="btn btn-sm btn-primary">
-                    Voir tout <i class="bi bi-arrow-right"></i>
-                </a>
+                <div>
+                    <a href="/markets/new" class="btn btn-sm btn-success me-2">
+                        <i class="bi bi-plus-circle"></i> Nouveau
+                    </a>
+                    <a href="/markets" class="btn btn-sm btn-primary">
+                        Voir tout <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -170,9 +257,13 @@
                         </thead>
                         <tbody id="recentMarketsTable">
                             <tr>
-                                <td colspan="7" class="text-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Chargement...</span>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                        <p class="mt-2">Aucun marché créé</p>
+                                        <a href="/markets/new" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-plus-circle"></i> Créer un marché
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -207,9 +298,10 @@
                         </thead>
                         <tbody id="lateStagesTable">
                             <tr>
-                                <td colspan="6" class="text-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Chargement...</span>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                                        <p class="mt-2">Aucune étape en retard</p>
                                     </div>
                                 </td>
                             </tr>
@@ -226,34 +318,141 @@
 <script>
 let statusChart, typeChart;
 
+// Fonctions utilitaires globales (indépendantes de App)
+function formatAmount(amount) {
+    if (amount === null || amount === undefined || isNaN(amount)) return '0,00 MAD';
+    return new Intl.NumberFormat('fr-MA', {
+        style: 'currency',
+        currency: 'MAD'
+    }).format(amount);
+}
+
+function formatDate(date) {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR');
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'planifie': 'secondary',
+        'en_cours': 'primary',
+        'termine': 'success',
+        'en_attente': 'warning',
+        'en_retard': 'danger',
+        'annule': 'dark',
+        'suspendu': 'dark'
+    };
+    return colors[status] || 'secondary';
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        'planifie': 'Planifié',
+        'en_cours': 'En cours',
+        'termine': 'Terminé',
+        'en_attente': 'En attente',
+        'en_retard': 'En retard',
+        'annule': 'Annulé',
+        'suspendu': 'Suspendu'
+    };
+    return labels[status] || status;
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
+function exportDashboard() {
+    showNotification('Export en cours de développement', 'info');
+}
+
 async function loadDashboardData() {
     try {
         // Charger les statistiques
         const statsResponse = await fetch('/api/dashboard/statistics');
+        if (!statsResponse.ok) throw new Error('Erreur API statistiques');
         const stats = await statsResponse.json();
         
-        // Mettre à jour les cartes de statistiques
-        document.getElementById('totalMarkets').textContent = stats.markets.total;
-        document.getElementById('enCoursMarkets').textContent = stats.markets.en_cours;
-        document.getElementById('enRetardMarkets').textContent = stats.markets.en_retard;
-        document.getElementById('termineMarkets').textContent = stats.markets.termine;
+        // Vérifier si données vides
+        const totalItems = (stats.markets?.total || 0) + (stats.planning?.total || 0);
+        const emptyStateMsg = document.getElementById('emptyStateMessage');
+        if (emptyStateMsg) {
+            emptyStateMsg.classList.toggle('d-none', totalItems > 0);
+        }
         
-        document.getElementById('totalEstimated').textContent = formatAmount(stats.amounts.total_estimated);
-        document.getElementById('totalDefinitive').textContent = formatAmount(stats.amounts.total_definitive);
-        document.getElementById('avgProgress').textContent = stats.progress.average.toFixed(1) + '%';
+        // Mettre à jour les cartes de statistiques
+        document.getElementById('totalMarkets').textContent = stats.markets?.total ?? 0;
+        document.getElementById('enCoursMarkets').textContent = stats.markets?.en_cours ?? 0;
+        document.getElementById('enRetardMarkets').textContent = stats.markets?.en_retard ?? 0;
+        document.getElementById('termineMarkets').textContent = stats.markets?.termine ?? 0;
+        
+        document.getElementById('totalEstimated').textContent = formatAmount(stats.amounts?.total_estimated);
+        document.getElementById('totalDefinitive').textContent = formatAmount(stats.amounts?.total_definitive);
+        
+        const avgProgress = stats.progress?.average ?? 0;
+        document.getElementById('avgProgress').textContent = Number(avgProgress).toFixed(1) + '%';
+        const progressBar = document.getElementById('avgProgressBar');
+        if (progressBar) {
+            progressBar.style.width = avgProgress + '%';
+            progressBar.textContent = Number(avgProgress).toFixed(1) + '%';
+        }
+        
+        // Statistiques de planification
+        if (stats.planning) {
+            document.getElementById('planningTotal').textContent = stats.planning.total ?? 0;
+            document.getElementById('planningBudget').textContent = formatAmount(stats.planning.budget);
+            document.getElementById('planningValidated').textContent = stats.planning.validated ?? 0;
+            document.getElementById('planningProgrammed').textContent = stats.planning.programmed ?? 0;
+        }
+        
+        // Masquer bouton planification vide si des données existent
+        const planningEmptyActions = document.getElementById('planningEmptyActions');
+        if (planningEmptyActions) {
+            planningEmptyActions.classList.toggle('d-none', (stats.planning?.total ?? 0) > 0);
+        }
         
         // Charger les données pour les graphiques
-        const statusResponse = await fetch('/api/dashboard/markets-by-status');
-        const statusData = await statusResponse.json();
+        const [statusResponse, typeResponse] = await Promise.all([
+            fetch('/api/dashboard/markets-by-status'),
+            fetch('/api/dashboard/markets-by-type')
+        ]);
         
-        const typeResponse = await fetch('/api/dashboard/markets-by-type');
+        const statusData = await statusResponse.json();
         const typeData = await typeResponse.json();
         
-        // Créer le graphique par statut
-        createStatusChart(statusData);
+        // Vérifier si données graphiques vides
+        const statusTotal = Object.values(statusData).reduce((a, b) => a + b, 0);
+        const typeTotal = Object.values(typeData).reduce((a, b) => a + b, 0);
         
-        // Créer le graphique par type
-        createTypeChart(typeData);
+        if (statusTotal === 0) {
+            document.getElementById('statusChart').style.display = 'none';
+            document.getElementById('statusChartEmpty').classList.remove('d-none');
+        } else {
+            document.getElementById('statusChart').style.display = 'block';
+            document.getElementById('statusChartEmpty').classList.add('d-none');
+            createStatusChart(statusData);
+        }
+        
+        if (typeTotal === 0) {
+            document.getElementById('typeChart').style.display = 'none';
+            document.getElementById('typeChartEmpty').classList.remove('d-none');
+        } else {
+            document.getElementById('typeChart').style.display = 'block';
+            document.getElementById('typeChartEmpty').classList.add('d-none');
+            createTypeChart(typeData);
+        }
         
         // Charger les marchés récents
         loadRecentMarkets();
@@ -263,7 +462,7 @@ async function loadDashboardData() {
         
     } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
-        showNotification('Erreur lors du chargement des données', 'danger');
+        showNotification('Erreur lors du chargement des données du tableau de bord', 'danger');
     }
 }
 
@@ -274,19 +473,24 @@ function createStatusChart(data) {
         statusChart.destroy();
     }
     
+    const labels = Object.keys(data).map(key => getStatusLabel(key));
+    const values = Object.values(data);
+    const total = values.reduce((a, b) => a + b, 0);
+    
     statusChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: Object.keys(data).map(key => key.replace('_', ' ').toUpperCase()),
+            labels: labels,
             datasets: [{
-                data: Object.values(data),
+                data: values,
                 backgroundColor: [
-                    '#0d6efd',
-                    '#198754',
-                    '#ffc107',
-                    '#dc3545',
-                    '#6c757d',
-                    '#0dcaf0'
+                    '#6c757d',  // planifie
+                    '#0d6efd',  // en_cours
+                    '#198754',  // termine
+                    '#ffc107',  // en_attente
+                    '#dc3545',  // en_retard
+                    '#212529',  // annule
+                    '#0dcaf0'   // suspendu
                 ]
             }]
         },
@@ -296,6 +500,16 @@ function createStatusChart(data) {
             plugins: {
                 legend: {
                     position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
                 }
             }
         }
@@ -309,13 +523,16 @@ function createTypeChart(data) {
         typeChart.destroy();
     }
     
+    const labels = Object.keys(data).map(key => key.replace('_', ' ').toUpperCase());
+    const values = Object.values(data);
+    
     typeChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: Object.keys(data).map(key => key.replace('_', ' ').toUpperCase()),
+            labels: labels,
             datasets: [{
                 label: 'Nombre de marchés',
-                data: Object.values(data),
+                data: values,
                 backgroundColor: '#0d6efd'
             }]
         },
@@ -331,7 +548,8 @@ function createTypeChart(data) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        stepSize: 1
+                        stepSize: 1,
+                        precision: 0
                     }
                 }
             }
@@ -342,33 +560,49 @@ function createTypeChart(data) {
 async function loadRecentMarkets() {
     try {
         const response = await fetch('/api/dashboard/recent-markets?limit=5');
+        if (!response.ok) throw new Error('Erreur API marchés récents');
         const markets = await response.json();
         
         const tbody = document.getElementById('recentMarketsTable');
         tbody.innerHTML = '';
         
-        if (markets.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Aucun marché récent</td></tr>';
+        if (!markets || markets.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <div class="text-muted">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mt-2">Aucun marché créé</p>
+                            <a href="/markets/new" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-circle"></i> Créer un marché
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            `;
             return;
         }
         
         markets.forEach(market => {
             const row = document.createElement('tr');
+            const objectText = market.object ? (market.object.substring(0, 50) + (market.object.length > 50 ? '...' : '')) : '-';
+            const progress = market.progress_percentage ?? 0;
+            
             row.innerHTML = `
-                <td><strong>${market.market_number}</strong></td>
-                <td>${market.object.substring(0, 50)}${market.object.length > 50 ? '...' : ''}</td>
-                <td><span class="badge bg-secondary">${market.market_type}</span></td>
+                <td><strong>${market.market_number || '-'}</strong></td>
+                <td>${objectText}</td>
+                <td><span class="badge bg-secondary">${market.market_type || '-'}</span></td>
                 <td>${formatAmount(market.estimated_amount)}</td>
-                <td><span class="badge badge-status bg-${getStatusColor(market.status)}">${market.status}</span></td>
+                <td><span class="badge bg-${getStatusColor(market.status)}">${getStatusLabel(market.status)}</span></td>
                 <td>
                     <div class="progress" style="height: 20px;">
-                        <div class="progress-bar" role="progressbar" style="width: ${market.progress_percentage}%;">
-                            ${market.progress_percentage}%
+                        <div class="progress-bar" role="progressbar" style="width: ${progress}%;">
+                            ${progress}%
                         </div>
                     </div>
                 </td>
                 <td>
-                    <a href="/markets/${market.id}" class="btn btn-sm btn-outline-primary btn-action">
+                    <a href="/markets/${market.id}" class="btn btn-sm btn-outline-primary">
                         <i class="bi bi-eye"></i>
                     </a>
                 </td>
@@ -377,55 +611,81 @@ async function loadRecentMarkets() {
         });
     } catch (error) {
         console.error('Erreur lors du chargement des marchés récents:', error);
+        const tbody = document.getElementById('recentMarketsTable');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4 text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Erreur de chargement
+                </td>
+            </tr>
+        `;
     }
 }
 
 async function loadLateStages() {
     try {
         const response = await fetch('/api/dashboard/late-stages?limit=5');
+        if (!response.ok) throw new Error('Erreur API étapes en retard');
         const stages = await response.json();
         
         const tbody = document.getElementById('lateStagesTable');
         tbody.innerHTML = '';
         
-        document.getElementById('lateStagesCount').textContent = stages.length;
+        document.getElementById('lateStagesCount').textContent = stages?.length ?? 0;
         
-        if (stages.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Aucune étape en retard</td></tr>';
+        if (!stages || stages.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <div class="text-muted">
+                            <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                            <p class="mt-2">Aucune étape en retard</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
             return;
         }
         
         stages.forEach(stage => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><strong>${stage.name}</strong></td>
-                <td>ID: ${stage.market_id}</td>
+                <td><strong>${stage.name || '-'}</strong></td>
+                <td>ID: ${stage.market_id || '-'}</td>
                 <td>${formatDate(stage.planned_date)}</td>
                 <td>${formatDate(stage.actual_date)}</td>
-                <td><span class="badge bg-danger">${stage.delay_days} jours</span></td>
-                <td><span class="badge alert-level-${stage.alert_level}">${stage.alert_level}</span></td>
+                <td><span class="badge bg-danger">${stage.delay_days ?? 0} jours</span></td>
+                <td><span class="badge bg-${stage.alert_level === 'high' ? 'danger' : (stage.alert_level === 'medium' ? 'warning' : 'info')}">${stage.alert_level || 'normal'}</span></td>
             `;
             tbody.appendChild(row);
         });
     } catch (error) {
         console.error('Erreur lors du chargement des étapes en retard:', error);
+        const tbody = document.getElementById('lateStagesTable');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-4 text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Erreur de chargement
+                </td>
+            </tr>
+        `;
     }
 }
 
-function getStatusColor(status) {
-    const colors = {
-        'planifie': 'secondary',
-        'en_cours': 'primary',
-        'termine': 'success',
-        'en_attente': 'warning',
-        'en_retard': 'danger',
-        'annule': 'dark'
-    };
-    return colors[status] || 'secondary';
-}
-
 function refreshDashboard() {
-    loadDashboardData();
+    const btn = document.querySelector('button[onclick="refreshDashboard()"]');
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualisation...';
+        btn.disabled = true;
+    }
+    
+    loadDashboardData().finally(() => {
+        if (btn) {
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualiser';
+            btn.disabled = false;
+        }
+        showNotification('Tableau de bord actualisé', 'success');
+    });
 }
 
 // Charger les données au démarrage

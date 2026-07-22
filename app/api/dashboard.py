@@ -13,6 +13,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.market import Market, MarketStatus
 from app.models.stage import Stage, StageStatus
+from app.models.market_planning import MarketPlanning
 from app.auth.dependencies import get_current_active_user
 
 router = APIRouter()
@@ -33,6 +34,11 @@ async def get_dashboard_statistics(
     Returns:
         Statistiques du tableau de bord
     """
+    from app.dashboard.statistics import get_statistics_service
+    
+    stats_service = get_statistics_service(db)
+    global_stats = stats_service.get_global_statistics()
+    
     # Statistiques des marchés
     total_markets = db.query(Market).count()
     markets_en_cours = db.query(Market).filter(Market.status == MarketStatus.EN_COURS).count()
@@ -52,6 +58,12 @@ async def get_dashboard_statistics(
     stages_completed = db.query(Stage).filter(Stage.status == StageStatus.COMPLETED).count()
     stages_in_progress = db.query(Stage).filter(Stage.status == StageStatus.IN_PROGRESS).count()
     stages_late = db.query(Stage).filter(Stage.is_late == True).count()
+    
+    # Statistiques de planification
+    total_plannings = db.query(MarketPlanning).count()
+    plannings_budget = db.query(func.sum(MarketPlanning.estimated_budget)).scalar() or 0
+    plannings_validated = db.query(MarketPlanning).filter(MarketPlanning.status == 'validee').count()
+    plannings_programmed = db.query(MarketPlanning).filter(MarketPlanning.status == 'programmee').count()
     
     return {
         "markets": {
@@ -74,6 +86,12 @@ async def get_dashboard_statistics(
             "completed": stages_completed,
             "in_progress": stages_in_progress,
             "late": stages_late
+        },
+        "planning": {
+            "total": total_plannings,
+            "budget": float(plannings_budget),
+            "validated": plannings_validated,
+            "programmed": plannings_programmed
         }
     }
 
@@ -126,6 +144,53 @@ async def get_markets_by_type(
         type_counts[market_type.value] = count
     
     return type_counts
+
+
+@router.get("/planning-statistics")
+async def get_planning_statistics(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Récupère les statistiques de planification pour le tableau de bord
+    
+    Args:
+        current_user: Utilisateur actuel
+        db: Session de base de données
+        
+    Returns:
+        Statistiques de planification
+    """
+    from app.models.market_planning import ProjectType, ProcedureType, MarketPlanningStatus
+    
+    total_plannings = db.query(MarketPlanning).count()
+    total_budget = db.query(func.sum(MarketPlanning.estimated_budget)).scalar() or 0
+    
+    # Répartition par type de projet
+    by_project_type = {}
+    for pt in ProjectType:
+        count = db.query(MarketPlanning).filter(MarketPlanning.project_type == pt).count()
+        by_project_type[pt.value] = count
+    
+    # Répartition par type de procédure
+    by_procedure_type = {}
+    for proc in ProcedureType:
+        count = db.query(MarketPlanning).filter(MarketPlanning.procedure_type == proc).count()
+        by_procedure_type[proc.value] = count
+    
+    # Répartition par statut
+    by_status = {}
+    for st in MarketPlanningStatus:
+        count = db.query(MarketPlanning).filter(MarketPlanning.status == st).count()
+        by_status[st.value] = count
+    
+    return {
+        "total_count": total_plannings,
+        "total_budget": float(total_budget),
+        "by_project_type": by_project_type,
+        "by_procedure_type": by_procedure_type,
+        "by_status": by_status
+    }
 
 
 @router.get("/recent-markets")

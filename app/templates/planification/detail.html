@@ -1,0 +1,541 @@
+{% extends "base.html" %}
+
+{% block title %}Détail Planification - {{ planning['planning_number'] }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Planification {{ planning['planning_number'] }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/planification" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+        <a href="/planification/{{ planning['id'] }}/edit" class="btn btn-sm btn-primary me-2">
+            <i class="bi bi-pencil"></i> Modifier
+        </a>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-planning-id="{{ planning['id'] }}" onclick="deletePlanning(this)">
+            <i class="bi bi-trash"></i> Supprimer
+        </button>
+    </div>
+</div>
+
+<!-- Informations générales -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informations générales</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td width="30%"><strong>Numéro de planification:</strong></td>
+                        <td>{{ planning['planning_number'] }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Exercice/Année:</strong></td>
+                        <td>{{ planning['fiscal_year'] }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Intitulé:</strong></td>
+                        <td>{{ planning['title'] }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Description:</strong></td>
+                        <td>{{ planning['description'] or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Statut:</strong></td>
+                        <td><span class="badge" id="statusBadge">{{ planning['status'] }}</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Priorité:</strong></td>
+                        <td><span class="badge" id="priorityBadge">{{ planning['priority'] }}</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Traçabilité</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless table-sm">
+                    <tr>
+                        <td><strong>Créé le:</strong></td>
+                        <td>{{ planning.created_at.strftime('%d/%m/%Y %H:%M') if planning.created_at else '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Modifié le:</strong></td>
+                        <td>{{ planning.updated_at.strftime('%d/%m/%Y %H:%M') if planning.updated_at else '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Type et procédure -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-check"></i> Type et procédure</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td width="40%"><strong>Type de projet:</strong></td>
+                        <td><span class="badge bg-secondary" id="projectTypeBadge">{{ planning['project_type'] }}</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Type de procédure:</strong></td>
+                        <td><span class="badge bg-info" id="procedureTypeBadge">{{ planning['procedure_type'] }}</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-currency-euro"></i> Budget et financement</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td width="40%"><strong>Budget estimatif:</strong></td>
+                        <td><strong id="budgetAmount">{{ planning['estimated_budget'] }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Source de financement:</strong></td>
+                        <td>{{ planning['funding_source'] or '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Service et responsable -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-building"></i> Service demandeur</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td width="40%"><strong>Service:</strong></td>
+                        <td>{{ planning['requesting_service_name'] or '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person"></i> Responsable</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td width="40%"><strong>Responsable:</strong></td>
+                        <td>{{ planning['responsible_name'] or '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dates prévisionnelles -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Calendrier prévisionnel</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="p-3 border rounded">
+                    <small class="text-muted">Lancement</small>
+                    <div class="fw-bold">{{ planning['launch_date'][:10] if planning['launch_date'] else '-' }}</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="p-3 border rounded">
+                    <small class="text-muted">Ouverture des plis</small>
+                    <div class="fw-bold">{{ planning['bid_opening_date'][:10] if planning['bid_opening_date'] else '-' }}</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="p-3 border rounded">
+                    <small class="text-muted">Attribution</small>
+                    <div class="fw-bold">{{ planning['attribution_date'][:10] if planning['attribution_date'] else '-' }}</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="p-3 border rounded">
+                    <small class="text-muted">Notification</small>
+                    <div class="fw-bold">{{ planning['notification_date'][:10] if planning['notification_date'] else '-' }}</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="p-3 border rounded">
+                    <small class="text-muted">Ordre de service</small>
+                    <div class="fw-bold">{{ planning['service_order_date'][:10] if planning['service_order_date'] else '-' }}</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3"></div>
+            <div class="col-md-4 mb-3">
+                <div class="p-3 border rounded bg-light">
+                    <small class="text-muted">Début d'exécution</small>
+                    <div class="fw-bold text-success">{{ planning['start_date'][:10] if planning['start_date'] else '-' }}</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="p-3 border rounded bg-light">
+                    <small class="text-muted">Fin d'exécution</small>
+                    <div class="fw-bold text-danger">{{ planning['end_date'][:10] if planning['end_date'] else '-' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Observations -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-chat-text"></i> Observations</h5>
+    </div>
+    <div class="card-body">
+        <p>{{ planning['observations'] or 'Aucune observation' }}</p>
+    </div>
+</div>
+
+<!-- Documents joints -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-file-earmark"></i> Documents joints</h5>
+        <button type="button" class="btn btn-sm btn-primary" onclick="showUploadModal()">
+            <i class="bi bi-upload"></i> Ajouter un document
+        </button>
+    </div>
+    <div class="card-body">
+        {% if planning.documents %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Fichier</th>
+                        <th>Taille</th>
+                        <th>Date d'upload</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in planning['documents'] %}
+                    <tr>
+                        <td>{{ doc['name'] }}</td>
+                        <td>{{ doc['file_name'] }}</td>
+                        <td>{{ doc['file_size'] }}</td>
+                        <td>{{ doc['uploaded_at'][:16] if doc['uploaded_at'] else '-' }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/api/market-planning/documents/{{ doc['id'] }}/download" class="btn btn-outline-primary" title="Télécharger">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" data-doc-id="{{ doc['id'] }}" onclick="deleteDocument(this)" title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center">Aucun document joint</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Upload Document -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ajouter un document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nom du document *</label>
+                        <input type="text" class="form-control" id="documentName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fichier *</label>
+                        <input type="file" class="form-control" id="documentFile" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="documentDescription" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="uploadDocument()">Téléverser</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmation suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmation de suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer cette planification ?</p>
+                <p class="text-danger">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentDeleteId = null;
+
+// Initialisation au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    // Formater les badges
+    const statusBadge = document.getElementById('statusBadge');
+    if (statusBadge) {
+        statusBadge.textContent = getStatusLabel(statusBadge.textContent);
+        statusBadge.classList.add('bg-' + getStatusColor(statusBadge.textContent));
+    }
+    
+    const priorityBadge = document.getElementById('priorityBadge');
+    if (priorityBadge) {
+        priorityBadge.textContent = getPriorityLabel(priorityBadge.textContent);
+        priorityBadge.classList.add('bg-' + getPriorityColor(priorityBadge.textContent));
+    }
+    
+    const projectTypeBadge = document.getElementById('projectTypeBadge');
+    if (projectTypeBadge) {
+        projectTypeBadge.textContent = getProjectTypeLabel(projectTypeBadge.textContent);
+    }
+    
+    const procedureTypeBadge = document.getElementById('procedureTypeBadge');
+    if (procedureTypeBadge) {
+        procedureTypeBadge.textContent = getProcedureTypeLabel(procedureTypeBadge.textContent);
+    }
+    
+    // Formater le montant
+    const budgetAmount = document.getElementById('budgetAmount');
+    if (budgetAmount) {
+        budgetAmount.textContent = formatAmount(parseFloat(budgetAmount.textContent));
+    }
+    
+    // Formater les tailles de fichiers
+    document.querySelectorAll('td:nth-child(3)').forEach(function(cell) {
+        const size = parseFloat(cell.textContent);
+        if (!isNaN(size) && size > 0) {
+            cell.textContent = formatFileSize(size);
+        }
+    });
+});
+
+function showUploadModal() {
+    document.getElementById('uploadForm').reset();
+    new bootstrap.Modal(document.getElementById('uploadModal')).show();
+}
+
+async function uploadDocument() {
+    const name = document.getElementById('documentName').value;
+    const file = document.getElementById('documentFile').files[0];
+    const description = document.getElementById('documentDescription').value;
+    
+    if (!name || !file) {
+        showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('name', name);
+    formData.append('description', description);
+    
+    try {
+        const response = await fetch(`/api/market-planning/{{ planning.id }}/documents`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+            showNotification('Document ajouté avec succès', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification('Erreur lors de l\'ajout du document', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de l\'ajout du document', 'danger');
+    }
+}
+
+function deletePlanning(button) {
+    currentDeleteId = button.getAttribute('data-planning-id');
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+async function confirmDelete() {
+    try {
+        const response = await fetch(`/api/market-planning/${currentDeleteId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Planification supprimée avec succès', 'success');
+            setTimeout(() => {
+                window.location.href = '/planification';
+            }, 1000);
+        } else {
+            showNotification('Erreur lors de la suppression', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la suppression', 'danger');
+    }
+}
+
+async function deleteDocument(button) {
+    const docId = button.getAttribute('data-doc-id');
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) return;
+    
+    try {
+        const response = await fetch(`/api/market-planning/documents/${docId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Document supprimé avec succès', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification('Erreur lors de la suppression', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la suppression', 'danger');
+    }
+}
+
+// Fonctions utilitaires
+function formatAmount(amount) {
+    return new Intl.NumberFormat('fr-MA', {
+        style: 'currency',
+        currency: 'MAD'
+    }).format(amount || 0);
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '-';
+    const sizes = ['Octets', 'Ko', 'Mo', 'Go'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+function get_project_type_label(type) {
+    const labels = {
+        'travaux': 'Travaux',
+        'fournitures': 'Fournitures',
+        'services': 'Services',
+        'prestations_intellectuelles': 'Prestations intellectuelles'
+    };
+    return labels[type] || type;
+}
+
+function get_procedure_type_label(type) {
+    const labels = {
+        'bon_commande': 'Bon de commande',
+        'marche_simplifie': 'Marché simplifié',
+        'ao_ouvert': 'AO ouvert',
+        'ao_restreint': 'AO restreint',
+        'consultation': 'Consultation',
+        'procedure_negociee': 'Procédure négociée'
+    };
+    return labels[type] || type;
+}
+
+function get_priority_label(priority) {
+    const labels = {
+        'faible': 'Faible',
+        'moyenne': 'Moyenne',
+        'haute': 'Haute',
+        'urgente': 'Urgente'
+    };
+    return labels[priority] || priority;
+}
+
+function get_status_label(status) {
+    const labels = {
+        'brouillon': 'Brouillon',
+        'en_preparation': 'En préparation',
+        'validee': 'Validée',
+        'programmee': 'Programmée',
+        'annulee': 'Annulée'
+    };
+    return labels[status] || status;
+}
+
+function get_priority_color(priority) {
+    const colors = {
+        'faible': 'info',
+        'moyenne': 'primary',
+        'haute': 'warning',
+        'urgente': 'danger'
+    };
+    return colors[priority] || 'secondary';
+}
+
+function get_status_color(status) {
+    const colors = {
+        'brouillon': 'secondary',
+        'en_preparation': 'info',
+        'validee': 'success',
+        'programmee': 'primary',
+        'annulee': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+</script>
+{% endblock %}

@@ -115,6 +115,73 @@ def export_markets_to_excel(markets: List[Market], filepath: str):
     wb.save(filepath)
 
 
+def _format_date(dt) -> str:
+    """Formate une date pour l'export."""
+    return dt.strftime("%d/%m/%Y") if dt else ""
+
+
+def export_plannings_to_excel(plannings: List, filepath: str):
+    """
+    Exporte une liste de planifications vers un fichier Excel
+
+    Args:
+        plannings: Liste des planifications à exporter
+        filepath: Chemin du fichier de sortie
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Planifications"
+
+    headers = [
+        "Numéro",
+        "Exercice",
+        "Intitulé",
+        "Type projet",
+        "Type procédure",
+        "Budget estimatif",
+        "Source financement",
+        "Service demandeur",
+        "Responsable",
+        "Priorité",
+        "Statut",
+        "Lancement",
+        "Ouverture plis",
+        "Attribution",
+        "Notification",
+        "Ordre de service",
+        "Début",
+        "Fin",
+        "Observations",
+    ]
+
+    create_styled_header(ws, headers)
+
+    row_num = 2
+    for p in plannings:
+        ws.cell(row=row_num, column=1, value=p.planning_number)
+        ws.cell(row=row_num, column=2, value=p.fiscal_year)
+        ws.cell(row=row_num, column=3, value=p.title)
+        ws.cell(row=row_num, column=4, value=p.project_type.value if p.project_type else "")
+        ws.cell(row=row_num, column=5, value=p.procedure_type.value if p.procedure_type else "")
+        ws.cell(row=row_num, column=6, value=p.estimated_budget)
+        ws.cell(row=row_num, column=7, value=p.funding_source or "")
+        ws.cell(row=row_num, column=8, value=p.requesting_service_name or "")
+        ws.cell(row=row_num, column=9, value=p.responsible_name or "")
+        ws.cell(row=row_num, column=10, value=p.priority.value if p.priority else "")
+        ws.cell(row=row_num, column=11, value=p.status.value if p.status else "")
+        ws.cell(row=row_num, column=12, value=_format_date(p.launch_date))
+        ws.cell(row=row_num, column=13, value=_format_date(p.bid_opening_date))
+        ws.cell(row=row_num, column=14, value=_format_date(p.attribution_date))
+        ws.cell(row=row_num, column=15, value=_format_date(p.notification_date))
+        ws.cell(row=row_num, column=16, value=_format_date(p.service_order_date))
+        ws.cell(row=row_num, column=17, value=_format_date(p.start_date))
+        ws.cell(row=row_num, column=18, value=_format_date(p.end_date))
+        ws.cell(row=row_num, column=19, value=p.observations or "")
+        row_num += 1
+
+    wb.save(filepath)
+
+
 def export_stages_to_excel(stages: List, filepath: str):
     """
     Exporte une liste d'étapes vers un fichier Excel

@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}{% if planning %}Modifier{% else %}Nouvelle{% endif %} Planification{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{% if planning %}Modifier{% else %}Nouvelle{% endif %} Planification</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/planification" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form id="planningForm" method="post">
+            <input type="hidden" name="planning_id" value="{% if planning %}{{ planning.id }}{% endif %}">
+            
+            <!-- Section Informations générales -->
+            <div class="mb-4">
+                <h5 class="mb-3 text-primary">
+                    <i class="bi bi-info-circle"></i> Informations générales
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Numéro de planification *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="planning_number" 
+                                   value="{% if planning %}{{ planning.planning_number }}{% endif %}" required>
+                            <button type="button" class="btn btn-outline-secondary" onclick="generateNumber()">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Exercice/Année *</label>
+                        <input type="number" class="form-control" name="fiscal_year" 
+                               value="{% if planning %}{{ planning.fiscal_year }}{% else %}{{ current_year }}{% endif %}" 
+                               min="2000" max="2100" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Intitulé *</label>
+                        <input type="text" class="form-control" name="title" 
+                               value="{% if planning %}{{ planning.title }}{% endif %}" 
+                               required maxlength="300">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3">{% if planning %}{{ planning.description }}{% endif %}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section Type et procédure -->
+            <div class="mb-4">
+                <h5 class="mb-3 text-primary">
+                    <i class="bi bi-list-check"></i> Type et procédure
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Type de projet *</label>
+                        <select class="form-select" name="project_type" required>
+                            <option value="">Sélectionner...</option>
+                            <option value="travaux" {% if planning and planning.project_type == 'travaux' %}selected{% endif %}>Travaux</option>
+                            <option value="fournitures" {% if planning and planning.project_type == 'fournitures' %}selected{% endif %}>Fournitures</option>
+                            <option value="services" {% if planning and planning.project_type == 'services' %}selected{% endif %}>Services</option>
+                            <option value="prestations_intellectuelles" {% if planning and planning.project_type == 'prestations_intellectuelles' %}selected{% endif %}>Prestations intellectuelles</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Type de procédure *</label>
+                        <select class="form-select" name="procedure_type" required>
+                            <option value="">Sélectionner...</option>
+                            <option value="bon_commande" {% if planning and planning.procedure_type == 'bon_commande' %}selected{% endif %}>Bon de commande</option>
+                            <option value="marche_simplifie" {% if planning and planning.procedure_type == 'marche_simplifie' %}selected{% endif %}>Marché simplifié</option>
+                            <option value="ao_ouvert" {% if planning and planning.procedure_type == 'ao_ouvert' %}selected{% endif %}>AO ouvert</option>
+                            <option value="ao_restreint" {% if planning and planning.procedure_type == 'ao_restreint' %}selected{% endif %}>AO restreint</option>
+                            <option value="consultation" {% if planning and planning.procedure_type == 'consultation' %}selected{% endif %}>Consultation</option>
+                            <option value="procedure_negociee" {% if planning and planning.procedure_type == 'procedure_negociee' %}selected{% endif %}>Procédure négociée</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section Budget et financement -->
+            <div class="mb-4">
+                <h5 class="mb-3 text-primary">
+                    <i class="bi bi-currency-euro"></i> Budget et financement
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Budget estimatif (MAD) *</label>
+                        <input type="number" class="form-control" name="estimated_budget" 
+                               value="{% if planning %}{{ planning.estimated_budget }}{% endif %}" 
+                               min="0" step="0.01" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Source de financement</label>
+                        <input type="text" class="form-control" name="funding_source" 
+                               value="{% if planning %}{{ planning.funding_source }}{% endif %}" 
+                               maxlength="200">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section Service et responsable -->
+            <div class="mb-4">
+                <h5 class="mb-3 text-primary">
+                    <i class="bi bi-people"></i> Service et responsable
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Service demandeur</label>
+                        <select class="form-select" name="requesting_service_id">
+                            <option value="">Sélectionner...</option>
+                            {% for service in services %}
+                            <option value="{{ service.id }}" {% if planning and planning.requesting_service_id == service.id %}selected{% endif %}>
+                                {{ service.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Service demandeur (nom)</label>
+                        <input type="text" class="form-control" name="requesting_service_name" 
+                               value="{% if planning %}{{ planning.requesting_service_name }}{% endif %}" 
+                               maxlength="200">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Responsable</label>
+                        <select class="form-select" name="responsible_id">
+                            <option value="">Sélectionner...</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}" {% if planning and planning.responsible_id == user.id %}selected{% endif %}>
+                                {{ user.full_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Responsable (nom)</label>
+                        <input type="text" class="form-control" name="responsible_name" 
+                               value="{% if planning %}{{ planning.responsible_name }}{% endif %}" 
+                               maxlength="200">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section Priorité et statut -->
+            <div class="mb-4">
+                <h5 class="mb-3 text-primary">
+                    <i class="bi bi-flag"></i> Priorité et statut
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Priorité</label>
+                        <select class="form-select" name="priority">
+                            <option value="moyenne" {% if not planning or planning.priority == 'moyenne' %}selected{% endif %}>Moyenne</option>
+                            <option value="faible" {% if planning and planning.priority == 'faible' %}selected{% endif %}>Faible</option>
+                            <option value="haute" {% if planning and planning.priority == 'haute' %}selected{% endif %}>Haute</option>
+                            <option value="urgente" {% if planning and planning.priority == 'urgente' %}selected{% endif %}>Urgente</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Statut</label>
+                        <select class="form-select" name="status">
+                            <option value="brouillon" {% if not planning or planning.status == 'brouillon' %}selected{% endif %}>Brouillon</option>
+                            <option value="en_preparation" {% if planning and planning.status == 'en_preparation' %}selected{% endif %}>En préparation</option>
+                            <option value="validee" {% if planning and planning.status == 'validee' %}selected{% endif %}>Validée</option>
+                            <option value="programmee" {% if planning and planning.status == 'programmee' %}selected{% endif %}>Programmée</option>
+                            <option value="annulee" {% if planning and planning.status == 'annulee' %}selected{% endif %}>Annulée</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section Dates prévisionnelles -->
+            <div class="mb-4">
+                <h5 class="mb-3 text-primary">
+                    <i class="bi bi-calendar-event"></i> Dates prévisionnelles
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Lancement</label>
+                        <input type="date" class="form-control" name="launch_date" 
+                               value="{% if planning and planning.launch_date %}{{ planning.launch_date.strftime('%Y-%m-%d') }}{% endif %}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Ouverture des plis</label>
+                        <input type="date" class="form-control" name="bid_opening_date" 
+                               value="{% if planning and planning.bid_opening_date %}{{ planning.bid_opening_date.strftime('%Y-%m-%d') }}{% endif %}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Attribution</label>
+                        <input type="date" class="form-control" name="attribution_date" 
+                               value="{% if planning and planning.attribution_date %}{{ planning.attribution_date.strftime('%Y-%m-%d') }}{% endif %}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Notification</label>
+                        <input type="date" class="form-control" name="notification_date" 
+                               value="{% if planning and planning.notification_date %}{{ planning.notification_date.strftime('%Y-%m-%d') }}{% endif %}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Ordre de service</label>
+                        <input type="date" class="form-control" name="service_order_date" 
+                               value="{% if planning and planning.service_order_date %}{{ planning.service_order_date.strftime('%Y-%m-%d') }}{% endif %}">
+                    </div>
+                    <div class="col-md-4"></div>
+                    <div class="col-md-4">
+                        <label class="form-label">Début</label>
+                        <input type="date" class="form-control" name="start_date" 
+                               value="{% if planning and planning.start_date %}{{ planning.start_date.strftime('%Y-%m-%d') }}{% endif %}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fin</label>
+                        <input type="date" class="form-control" name="end_date" 
+                               value="{% if planning and planning.end_date %}{{ planning.end_date.strftime('%Y-%m-%d') }}{% endif %}">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section Observations -->
+            <div class="mb-4">
+                <h5 class="mb-3 text-primary">
+                    <i class="bi bi-chat-text"></i> Observations
+                </h5>
+                <div>
+                    <label class="form-label">Observations</label>
+                    <textarea class="form-control" name="observations" rows="3">{% if planning %}{{ planning.observations }}{% endif %}</textarea>
+                </div>
+            </div>
+            
+            <!-- Boutons -->
+            <div class="d-flex justify-content-between">
+                <a href="/planification" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Annuler
+                </a>
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Enregistrer
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function generateNumber() {
+    const fiscalYear = document.querySelector('input[name="fiscal_year"]').value;
+    if (!fiscalYear) {
+        showNotification('Veuillez d\'abord sélectionner l\'exercice', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/market-planning/generate-number?fiscal_year=${fiscalYear}`);
+        const data = await response.json();
+        document.querySelector('input[name="planning_number"]').value = data.planning_number;
+        showNotification('Numéro généré avec succès', 'success');
+    } catch (error) {
+        console.error('Erreur lors de la génération du numéro:', error);
+        showNotification('Erreur lors de la génération du numéro', 'danger');
+    }
+}
+
+document.getElementById('planningForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {};
+    formData.forEach((value, key) => {
+        if (value) {
+            data[key] = value;
+        }
+    });
+    
+    // Conversion des types
+    if (data.fiscal_year) data.fiscal_year = parseInt(data.fiscal_year);
+    if (data.estimated_budget) data.estimated_budget = parseFloat(data.estimated_budget);
+    if (data.requesting_service_id) data.requesting_service_id = parseInt(data.requesting_service_id);
+    if (data.responsible_id) data.responsible_id = parseInt(data.responsible_id);
+    
+    // Gestion des dates
+    const dateFields = ['launch_date', 'bid_opening_date', 'attribution_date', 'notification_date', 
+                        'service_order_date', 'start_date', 'end_date'];
+    dateFields.forEach(field => {
+        if (data[field]) {
+            data[field] = new Date(data[field]).toISOString();
+        } else {
+            data[field] = null;
+        }
+    });
+    
+    const planningId = data.planning_id;
+    delete data.planning_id;
+    
+    try {
+        const url = planningId ? `/api/market-planning/${planningId}` : '/api/market-planning/';
+        const method = planningId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            showNotification(planningId ? 'Planification modifiée avec succès' : 'Planification créée avec succès', 'success');
+            setTimeout(() => {
+                window.location.href = '/planification';
+            }, 1000);
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de l\'enregistrement', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de l\'enregistrement:', error);
+        showNotification('Erreur lors de l\'enregistrement', 'danger');
+    }
+});
+</script>
+{% endblock %}
