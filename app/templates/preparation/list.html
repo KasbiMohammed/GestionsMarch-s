@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+
+{% block title %}Préparation des Dossiers - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Préparation des Dossiers</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="exportData()">
+            <i class="bi bi-download"></i> Exporter
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshData()">
+            <i class="bi bi-arrow-clockwise"></i> Actualiser
+        </button>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="searchInput" placeholder="Rechercher...">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tous les statuts</option>
+                    <option value="en_preparation">En préparation</option>
+                    <option value="en_cours">En cours</option>
+                    <option value="en_attente_validation">En attente de validation</option>
+                    <option value="valide">Validé</option>
+                    <option value="rejete">Rejeté</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="sortBy">
+                    <option value="created_at">Date de création</option>
+                    <option value="preparation_number">Numéro</option>
+                    <option value="object">Objet</option>
+                    <option value="estimated_budget">Budget</option>
+                    <option value="status">Statut</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="sortOrder">
+                    <option value="desc">Décroissant</option>
+                    <option value="asc">Croissant</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100" onclick="loadPreparations()">
+                    <i class="bi bi-search"></i> Filtrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card border-primary">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Dossiers</h6>
+                <h3 class="mb-0 text-primary" id="totalCount">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-warning">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">En Préparation</h6>
+                <h3 class="mb-0 text-warning" id="enPreparationCount">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-info">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">En Attente</h6>
+                <h3 class="mb-0 text-info" id="enAttenteCount">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-success">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Validés</h6>
+                <h3 class="mb-0 text-success" id="valideCount">0</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Numéro</th>
+                        <th>Objet</th>
+                        <th>Service</th>
+                        <th>Budget</th>
+                        <th>Progression</th>
+                        <th>Statut</th>
+                        <th>Validations</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="preparationsTable">
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                <p class="mt-2">Aucun dossier de préparation</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <div>
+        <span id="pageInfo">Page 1 sur 1</span>
+    </div>
+    <nav>
+        <ul class="pagination mb-0" id="pagination">
+        </ul>
+    </nav>
+</div>
+
+<!-- Modal de création/modification -->
+<div class="modal fade" id="preparationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Nouvelle Préparation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="preparationForm">
+                    <input type="hidden" id="preparationId">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Planification</label>
+                            <select class="form-select" id="planningId" required>
+                                <option value="">Sélectionner...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Numéro de préparation</label>
+                            <input type="text" class="form-control" id="preparationNumber">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Objet</label>
+                            <input type="text" class="form-control" id="object" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Type de procédure</label>
+                            <input type="text" class="form-control" id="procurementType">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Procédure</label>
+                            <input type="text" class="form-control" id="procedureType">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Durée (jours)</label>
+                            <input type="number" class="form-control" id="duration">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Budget estimatif (MAD)</label>
+                            <input type="number" class="form-control" id="estimatedBudget" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Source de financement</label>
+                            <input type="text" class="form-control" id="fundingSource">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Lieu</label>
+                            <input type="text" class="form-control" id="location">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Observations</label>
+                            <textarea class="form-control" id="observations" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="savePreparation()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer ce dossier de préparation ?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let pageSize = 20;
+let totalPages = 1;
+let currentDeleteId = null;
+
+// Helper functions
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadValidatedPlannings();
+    loadPreparations();
+    loadStatistics();
+});
+
+async function loadValidatedPlannings() {
+    try {
+        const response = await authenticatedFetch('/api/market-planning/?status=validee&limit=1000');
+        const data = await response.json();
+        
+        const planningSelect = document.getElementById('planningId');
+        data.items.forEach(planning => {
+            planningSelect.innerHTML += `<option value="${planning.id}">${planning.planning_number} - ${planning.title}</option>`;
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des planifications:', error);
+    }
+}
+
+async function loadPreparations() {
+    try {
+        const params = new URLSearchParams({
+            skip: (currentPage - 1) * pageSize,
+            limit: pageSize,
+            search: document.getElementById('searchInput').value,
+            status: document.getElementById('statusFilter').value,
+            sort_by: document.getElementById('sortBy').value,
+            sort_order: document.getElementById('sortOrder').value
+        });
+        
+        const response = await authenticatedFetch(`/api/market-preparation/?${params}`);
+        const data = await response.json();
+        
+        displayPreparations(data.items);
+        updatePagination(data.total, data.page, data.page_size, data.total_pages);
+    } catch (error) {
+        console.error('Erreur lors du chargement des préparations:', error);
+        showNotification('Erreur lors du chargement des données', 'danger');
+    }
+}
+
+async function loadStatistics() {
+    try {
+        const response = await authenticatedFetch('/api/market-preparation/statistics/summary');
+        const stats = await response.json();
+        
+        document.getElementById('totalCount').textContent = stats.total || 0;
+        document.getElementById('enPreparationCount').textContent = stats.by_status?.en_preparation || 0;
+        document.getElementById('enAttenteCount').textContent = stats.by_status?.en_attente_validation || 0;
+        document.getElementById('valideCount').textContent = stats.by_status?.valide || 0;
+    } catch (error) {
+        console.error('Erreur lors du chargement des statistiques:', error);
+    }
+}
+
+function displayPreparations(preparations) {
+    const tbody = document.getElementById('preparationsTable');
+    tbody.innerHTML = '';
+    
+    if (!preparations || preparations.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Aucun dossier de préparation</p>
+                    </div>
+                </td>
+            </tr>`;
+        return;
+    }
+    
+    preparations.forEach(prep => {
+        const statusColors = {
+            'en_preparation': 'warning',
+            'en_cours': 'primary',
+            'en_attente_validation': 'info',
+            'valide': 'success',
+            'rejete': 'danger'
+        };
+        
+        const statusLabels = {
+            'en_preparation': 'En préparation',
+            'en_cours': 'En cours',
+            'en_attente_validation': 'En attente',
+            'valide': 'Validé',
+            'rejete': 'Rejeté'
+        };
+        
+        const validations = [];
+        if (prep.technical_validation) validations.push('<span class="badge bg-success">T</span>');
+        if (prep.financial_validation) validations.push('<span class="badge bg-success">F</span>');
+        if (prep.administrative_validation) validations.push('<span class="badge bg-success">A</span>');
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${prep.preparation_number || '-'}</strong></td>
+            <td>${prep.object.substring(0, 50)}${prep.object.length > 50 ? '...' : ''}</td>
+            <td>${prep.requesting_service || '-'}</td>
+            <td>${formatAmount(prep.estimated_budget)}</td>
+            <td>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar" role="progressbar" style="width: ${prep.progress_percentage}%;">${prep.progress_percentage}%</div>
+                </div>
+            </td>
+            <td><span class="badge bg-${statusColors[prep.status] || 'secondary'}">${statusLabels[prep.status] || prep.status}</span></td>
+            <td>${validations.join(' ') || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="viewPreparation(${prep.id})">
+                    <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary me-1" onclick="editPreparation(${prep.id})">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deletePreparation(${prep.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function updatePagination(total, page, pageSize, totalPages) {
+    document.getElementById('pageInfo').textContent = `Page ${page} sur ${totalPages}`;
+    
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    
+    if (totalPages > 1) {
+        if (page > 1) {
+            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${page - 1})">Précédent</a></li>`;
+        }
+        
+        for (let i = 1; i <= totalPages; i++) {
+            pagination.innerHTML += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" onclick="goToPage(${i})">${i}</a></li>`;
+        }
+        
+        if (page < totalPages) {
+            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${page + 1})">Suivant</a></li>`;
+        }
+    }
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    loadPreparations();
+}
+
+function openModal() {
+    document.getElementById('modalTitle').textContent = 'Nouvelle Préparation';
+    document.getElementById('preparationForm').reset();
+    document.getElementById('preparationId').value = '';
+    new bootstrap.Modal(document.getElementById('preparationModal')).show();
+}
+
+async function savePreparation() {
+    const form = document.getElementById('preparationForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const data = {
+        planning_id: parseInt(document.getElementById('planningId').value),
+        preparation_number: document.getElementById('preparationNumber').value,
+        object: document.getElementById('object').value,
+        procurement_type: document.getElementById('procurementType').value,
+        procedure_type: document.getElementById('procedureType').value,
+        duration: document.getElementById('duration').value ? parseInt(document.getElementById('duration').value) : null,
+        estimated_budget: parseFloat(document.getElementById('estimatedBudget').value),
+        funding_source: document.getElementById('fundingSource').value,
+        location: document.getElementById('location').value,
+        observations: document.getElementById('observations').value
+    };
+    
+    const preparationId = document.getElementById('preparationId').value;
+    
+    try {
+        const url = preparationId ? `/api/market-preparation/${preparationId}` : '/api/market-preparation/';
+        const method = preparationId ? 'PUT' : 'POST';
+        
+        const response = await authenticatedFetch(url, {
+            method: method,
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('preparationModal')).hide();
+            loadPreparations();
+            loadStatistics();
+            showNotification('Préparation enregistrée avec succès', 'success');
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de l\'enregistrement', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de l\'enregistrement:', error);
+        showNotification('Erreur lors de l\'enregistrement', 'danger');
+    }
+}
+
+async function editPreparation(id) {
+    try {
+        const response = await authenticatedFetch(`/api/market-preparation/${id}`);
+        const prep = await response.json();
+        
+        document.getElementById('modalTitle').textContent = 'Modifier la Préparation';
+        document.getElementById('preparationId').value = prep.id;
+        document.getElementById('planningId').value = prep.planning_id;
+        document.getElementById('preparationNumber').value = prep.preparation_number || '';
+        document.getElementById('object').value = prep.object;
+        document.getElementById('procurementType').value = prep.procurement_type || '';
+        document.getElementById('procedureType').value = prep.procedure_type || '';
+        document.getElementById('duration').value = prep.duration || '';
+        document.getElementById('estimatedBudget').value = prep.estimated_budget;
+        document.getElementById('fundingSource').value = prep.funding_source || '';
+        document.getElementById('location').value = prep.location || '';
+        document.getElementById('observations').value = prep.observations || '';
+        
+        new bootstrap.Modal(document.getElementById('preparationModal')).show();
+    } catch (error) {
+        console.error('Erreur lors du chargement:', error);
+        showNotification('Erreur lors du chargement', 'danger');
+    }
+}
+
+function deletePreparation(id) {
+    currentDeleteId = id;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+async function confirmDelete() {
+    try {
+        const response = await authenticatedFetch(`/api/market-preparation/${currentDeleteId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            loadPreparations();
+            loadStatistics();
+            showNotification('Préparation supprimée avec succès', 'success');
+        } else {
+            showNotification('Erreur lors de la suppression', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        showNotification('Erreur lors de la suppression', 'danger');
+    }
+}
+
+function viewPreparation(id) {
+    window.location.href = `/preparation/${id}`;
+}
+
+function refreshData() {
+    loadPreparations();
+    loadStatistics();
+}
+
+function exportData() {
+    showNotification('Export en cours de développement', 'info');
+}
+
+function formatAmount(amount) {
+    if (!amount) return '0,00 MAD';
+    return new Intl.NumberFormat('fr-MA', {
+        style: 'currency',
+        currency: 'MAD'
+    }).format(amount);
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

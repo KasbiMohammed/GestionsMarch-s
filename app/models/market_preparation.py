@@ -1,6 +1,7 @@
 """
 Modèles pour la préparation des marchés
-Module 2: Préparation du marché
+Module 2: Préparation du dossier du marché
+Relation: 1 planification → 1 dossier de préparation
 """
 
 from datetime import datetime
@@ -13,38 +14,36 @@ from app.database import Base
 
 class PreparationStatus(str, Enum):
     """Statuts de la préparation"""
-    DRAFT = "brouillon"
+    DRAFT = "en_preparation"
     IN_PROGRESS = "en_cours"
-    TECHNICAL_VALIDATION = "validation_technique"
-    FINANCIAL_VALIDATION = "validation_financière"
-    JURIDICAL_VALIDATION = "validation_juridique"
-    INTERNAL_VISA = "visa_interne"
-    READY = "prêt"
-    PUBLISHED = "publié"
+    PENDING_VALIDATION = "en_attente_validation"
+    VALIDATED = "valide"
+    REJECTED = "rejete"
 
 
 class MarketPreparation(Base):
-    """Préparation d'un marché"""
+    """Préparation d'un marché - Dossier de préparation"""
     __tablename__ = "market_preparations"
     
     id = Column(Integer, primary_key=True, index=True)
-    market_id = Column(Integer, ForeignKey("markets.id"), nullable=False)
-    need_id = Column(Integer, ForeignKey("service_needs.id"), nullable=True)
+    planning_id = Column(Integer, ForeignKey("market_plannings.id"), nullable=False, unique=True)
     
-    # Définition du besoin
-    need_description = Column(Text, nullable=False)
-    technical_specifications = Column(Text, nullable=True)
-    performance_requirements = Column(Text, nullable=True)
+    # Informations générales
+    preparation_number = Column(String(50), unique=True, nullable=True)
+    object = Column(String(300), nullable=False)
+    procurement_type = Column(String(50), nullable=True)
+    procedure_type = Column(String(50), nullable=True)
+    requesting_service = Column(String(200), nullable=True)
+    responsible_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    duration = Column(Integer, nullable=True)  # en jours
+    location = Column(String(200), nullable=True)
     
-    # Estimation des coûts
-    estimated_amount = Column(Float, nullable=False)
-    cost_breakdown = Column(JSON, nullable=True)  # Détail des coûts
+    # Budget et financement
+    estimated_budget = Column(Float, nullable=False)
+    funding_source = Column(String(200), nullable=True)
     
-    # Choix du mode de passation
-    procurement_method = Column(String(100), nullable=False)
-    procurement_justification = Column(Text, nullable=True)
-    
-    # Statut de préparation
+    # Progression et statut
+    progress_percentage = Column(Integer, default=0)
     status = Column(SQLEnum(PreparationStatus), default=PreparationStatus.DRAFT)
     
     # Validations
@@ -58,54 +57,18 @@ class MarketPreparation(Base):
     financial_validation_date = Column(DateTime, nullable=True)
     financial_validation_comments = Column(Text, nullable=True)
     
-    juridical_validation = Column(Boolean, default=False)
-    juridical_validator = Column(Integer, ForeignKey("users.id"), nullable=True)
-    juridical_validation_date = Column(DateTime, nullable=True)
-    juridical_validation_comments = Column(Text, nullable=True)
+    administrative_validation = Column(Boolean, default=False)
+    administrative_validator = Column(Integer, ForeignKey("users.id"), nullable=True)
+    administrative_validation_date = Column(DateTime, nullable=True)
+    administrative_validation_comments = Column(Text, nullable=True)
     
-    internal_visa = Column(Boolean, default=False)
-    visa_signer = Column(Integer, ForeignKey("users.id"), nullable=True)
-    visa_date = Column(DateTime, nullable=True)
+    # Observations
+    observations = Column(Text, nullable=True)
     
-    # Traçabilité
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relations
-    market = relationship("Market", back_populates="preparation")
-    need = relationship("ServiceNeed")
-    cps = relationship("CPS", back_populates="preparation", uselist=False, cascade="all, delete-orphan")
-    bpu = relationship("BPU", back_populates="preparation", uselist=False, cascade="all, delete-orphan")
-    dqe = relationship("DQE", back_populates="preparation", uselist=False, cascade="all, delete-orphan")
-
-
-class CPS(Base):
-    """Cahier des Prescriptions Spéciales"""
-    __tablename__ = "cps"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    preparation_id = Column(Integer, ForeignKey("market_preparations.id"), nullable=False)
-    
-    # Contenu du CPS
-    general_conditions = Column(Text, nullable=True)
-    special_conditions = Column(Text, nullable=True)
-    technical_specifications = Column(Text, nullable=True)
-    administrative_clauses = Column(Text, nullable=True)
-    financial_clauses = Column(Text, nullable=True)
-    legal_clauses = Column(Text, nullable=True)
-    
-    # Références réglementaires
-    regulatory_references = Column(Text, nullable=True)
-    
-    # Validation
-    validated = Column(Boolean, default=False)
-    validated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    validated_at = Column(DateTime, nullable=True)
-    
-    # Version
-    version = Column(Integer, default=1)
+    # Suppression logique
+    is_deleted = Column(Boolean, default=False)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     
     # Traçabilité
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -114,86 +77,93 @@ class CPS(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relations
-    preparation = relationship("MarketPreparation", back_populates="cps")
+    planning = relationship("MarketPlanning", back_populates="preparation")
+    responsible = relationship("User", foreign_keys=[responsible_id])
+    documents = relationship("PreparationDocument", back_populates="preparation", cascade="all, delete-orphan")
+    history = relationship("PreparationHistory", back_populates="preparation", cascade="all, delete-orphan")
+    alerts = relationship("PreparationAlert", back_populates="preparation", cascade="all, delete-orphan")
+    validation_workflow = relationship("ValidationWorkflow", back_populates="preparation", uselist=False, cascade="all, delete-orphan")
 
 
-class BPU(Base):
-    """Bordereau des Prix Unitaires"""
-    __tablename__ = "bpu"
+class PreparationDocument(Base):
+    """Documents préparatoires du dossier de préparation"""
+    __tablename__ = "preparation_documents"
     
     id = Column(Integer, primary_key=True, index=True)
     preparation_id = Column(Integer, ForeignKey("market_preparations.id"), nullable=False)
     
-    # Structure du BPU
-    items = Column(JSON, nullable=True)  # Liste des articles avec prix unitaires
-    
-    # Validation
-    validated = Column(Boolean, default=False)
-    validated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    validated_at = Column(DateTime, nullable=True)
-    
-    # Version
-    version = Column(Integer, default=1)
-    
-    # Traçabilité
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relations
-    preparation = relationship("MarketPreparation", back_populates="bpu")
-
-
-class DQE(Base):
-    """Devis Quantitatif Estimatif"""
-    __tablename__ = "dqe"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    preparation_id = Column(Integer, ForeignKey("market_preparations.id"), nullable=False)
-    
-    # Structure du DQE
-    chapters = Column(JSON, nullable=True)  # Chapitres et quantités estimées
-    
-    # Validation
-    validated = Column(Boolean, default=False)
-    validated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    validated_at = Column(DateTime, nullable=True)
-    
-    # Version
-    version = Column(Integer, default=1)
-    
-    # Traçabilité
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relations
-    preparation = relationship("MarketPreparation", back_populates="dqe")
-
-
-class TechnicalPlan(Base):
-    """Plans et études techniques"""
-    __tablename__ = "technical_plans"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    preparation_id = Column(Integer, ForeignKey("market_preparations.id"), nullable=False)
-    
-    # Informations du plan
-    reference = Column(String(100), nullable=False)
-    description = Column(String(200), nullable=True)
-    plan_type = Column(String(50), nullable=True)  # architectural, structural, electrical, etc.
+    # Type de document
+    document_type = Column(String(50), nullable=False)  # CPS, RC, AE, BPU, DQE, estimation, plans, etc.
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
     
     # Fichier
     file_path = Column(String(500), nullable=False)
+    file_name = Column(String(255), nullable=False)
     file_size = Column(Integer, nullable=True)
+    file_type = Column(String(50), nullable=True)
     
-    # Validation
+    # Statut
+    is_required = Column(Boolean, default=True)
+    is_uploaded = Column(Boolean, default=False)
     validated = Column(Boolean, default=False)
     validated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     validated_at = Column(DateTime, nullable=True)
     
     # Traçabilité
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relations
+    preparation = relationship("MarketPreparation", back_populates="documents")
+
+
+class PreparationHistory(Base):
+    """Historique des actions sur le dossier de préparation"""
+    __tablename__ = "preparation_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    preparation_id = Column(Integer, ForeignKey("market_preparations.id"), nullable=False)
+    
+    # Action
+    action = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    
+    # Utilisateur
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_name = Column(String(100), nullable=True)
+    
+    # Traçabilité
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relations
+    preparation = relationship("MarketPreparation", back_populates="history")
+    user = relationship("User")
+
+
+class PreparationAlert(Base):
+    """Alertes pour le dossier de préparation"""
+    __tablename__ = "preparation_alerts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    preparation_id = Column(Integer, ForeignKey("market_preparations.id"), nullable=False)
+    
+    # Type d'alerte
+    alert_type = Column(String(50), nullable=False)  # missing_documents, pending_validation, delay, open_observations
+    severity = Column(String(20), nullable=False)  # low, medium, high, critical
+    
+    # Message
+    title = Column(String(200), nullable=False)
+    message = Column(Text, nullable=True)
+    
+    # Statut
+    is_resolved = Column(Boolean, default=False)
+    resolved_at = Column(DateTime, nullable=True)
+    resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Traçabilité
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relations
+    preparation = relationship("MarketPreparation", back_populates="alerts")

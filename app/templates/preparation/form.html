@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Nouvelle Préparation - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Nouvelle Préparation</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/preparation" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="preparationForm">
+                    <input type="hidden" id="preparationId">
+                    
+                    <h5 class="mb-3">Informations générales</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Planification <span class="text-danger">*</span></label>
+                            <select class="form-select" id="planningId" required>
+                                <option value="">Sélectionner une planification validée...</option>
+                            </select>
+                            <small class="text-muted">Seules les planifications validées sont disponibles</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Numéro de préparation</label>
+                            <input type="text" class="form-control" id="preparationNumber" placeholder="Généré automatiquement">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Objet <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="object" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Type de procédure</label>
+                            <select class="form-select" id="procurementType">
+                                <option value="">Sélectionner...</option>
+                                <option value="travaux">Travaux</option>
+                                <option value="fournitures">Fournitures</option>
+                                <option value="services">Services</option>
+                                <option value="prestations_intellectuelles">Prestations intellectuelles</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Procédure</label>
+                            <select class="form-select" id="procedureType">
+                                <option value="">Sélectionner...</option>
+                                <option value="bon_commande">Bon de commande</option>
+                                <option value="marche_simplifie">Marché simplifié</option>
+                                <option value="ao_ouvert">Appel d'offres ouvert</option>
+                                <option value="ao_restreint">Appel d'offres restreint</option>
+                                <option value="consultation">Consultation</option>
+                                <option value="procedure_negociee">Procédure négociée</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Durée (jours)</label>
+                            <input type="number" class="form-control" id="duration" min="1">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Service demandeur</label>
+                            <input type="text" class="form-control" id="requestingService">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Responsable</label>
+                            <select class="form-select" id="responsibleId">
+                                <option value="">Sélectionner...</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Lieu</label>
+                            <input type="text" class="form-control" id="location">
+                        </div>
+                    </div>
+                    
+                    <h5 class="mb-3">Budget et financement</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Budget estimatif (MAD) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="estimatedBudget" required min="0" step="0.01">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Source de financement</label>
+                            <input type="text" class="form-control" id="fundingSource">
+                        </div>
+                    </div>
+                    
+                    <h5 class="mb-3">Observations</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label class="form-label">Observations</label>
+                            <textarea class="form-control" id="observations" rows="4" placeholder="Remarques ou commentaires..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="/preparation" class="btn btn-secondary">Annuler</a>
+                        <button type="button" class="btn btn-primary" onclick="savePreparation()">
+                            <i class="bi bi-save"></i> Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Documents requis</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush" id="requiredDocuments">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Cahier des Prescriptions Spéciales (CPS)
+                        <span class="badge bg-secondary">À télécharger</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Règlement de Consultation (RC)
+                        <span class="badge bg-secondary">À télécharger</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Acte d'Engagement (AE)
+                        <span class="badge bg-secondary">À télécharger</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Bordereau des Prix Unitaires (BPU)
+                        <span class="badge bg-secondary">À télécharger</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Devis Quantitatif Estimatif (DQE)
+                        <span class="badge bg-secondary">À télécharger</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Estimation détaillée
+                        <span class="badge bg-secondary">À télécharger</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Informations</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><i class="bi bi-info-circle"></i> <strong>Relation:</strong></p>
+                <p class="text-muted small">1 planification → 1 dossier de préparation</p>
+                <hr>
+                <p class="mb-2"><i class="bi bi-check-circle"></i> <strong>Validations requises:</strong></p>
+                <ul class="text-muted small mb-0">
+                    <li>Validation technique</li>
+                    <li>Validation financière</li>
+                    <li>Validation administrative</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Helper functions
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadValidatedPlannings();
+    loadUsers();
+    
+    // Check if editing
+    const urlParams = new URLSearchParams(window.location.search);
+    const planningId = urlParams.get('planning_id');
+    if (planningId) {
+        document.getElementById('planningId').value = planningId;
+        loadPlanningDetails(planningId);
+    }
+});
+
+async function loadValidatedPlannings() {
+    try {
+        const response = await authenticatedFetch('/api/market-planning/?status=validee&limit=1000');
+        const data = await response.json();
+        
+        const planningSelect = document.getElementById('planningId');
+        data.items.forEach(planning => {
+            planningSelect.innerHTML += `<option value="${planning.id}">${planning.planning_number} - ${planning.title}</option>`;
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des planifications:', error);
+        showNotification('Erreur lors du chargement des planifications', 'danger');
+    }
+}
+
+async function loadUsers() {
+    try {
+        const response = await authenticatedFetch('/api/users/?limit=1000');
+        const data = await response.json();
+        
+        const userSelect = document.getElementById('responsibleId');
+        data.items.forEach(user => {
+            userSelect.innerHTML += `<option value="${user.id}">${user.full_name}</option>`;
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des utilisateurs:', error);
+    }
+}
+
+async function loadPlanningDetails(planningId) {
+    try {
+        const response = await authenticatedFetch(`/api/market-planning/${planningId}`);
+        const planning = await response.json();
+        
+        document.getElementById('object').value = planning.title;
+        document.getElementById('procurementType').value = planning.project_type;
+        document.getElementById('procedureType').value = planning.procedure_type;
+        document.getElementById('estimatedBudget').value = planning.estimated_budget;
+        document.getElementById('fundingSource').value = planning.funding_source || '';
+        document.getElementById('requestingService').value = planning.requesting_service_name || '';
+        document.getElementById('responsibleId').value = planning.responsible_id || '';
+    } catch (error) {
+        console.error('Erreur lors du chargement des détails:', error);
+    }
+}
+
+async function savePreparation() {
+    const form = document.getElementById('preparationForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const data = {
+        planning_id: parseInt(document.getElementById('planningId').value),
+        preparation_number: document.getElementById('preparationNumber').value,
+        object: document.getElementById('object').value,
+        procurement_type: document.getElementById('procurementType').value,
+        procedure_type: document.getElementById('procedureType').value,
+        duration: document.getElementById('duration').value ? parseInt(document.getElementById('duration').value) : null,
+        requesting_service: document.getElementById('requestingService').value,
+        responsible_id: document.getElementById('responsibleId').value ? parseInt(document.getElementById('responsibleId').value) : null,
+        location: document.getElementById('location').value,
+        estimated_budget: parseFloat(document.getElementById('estimatedBudget').value),
+        funding_source: document.getElementById('fundingSource').value,
+        observations: document.getElementById('observations').value
+    };
+    
+    try {
+        const response = await authenticatedFetch('/api/market-preparation/', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showNotification('Préparation créée avec succès', 'success');
+            setTimeout(() => {
+                window.location.href = `/preparation/${result.id}`;
+            }, 1500);
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de la création', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la création:', error);
+        showNotification('Erreur lors de la création', 'danger');
+    }
+}
+
+document.getElementById('planningId').addEventListener('change', function() {
+    const planningId = this.value;
+    if (planningId) {
+        loadPlanningDetails(planningId);
+    }
+});
+</script>
+{% endblock %}

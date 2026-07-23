@@ -101,6 +101,7 @@ class MarketPlanning(Base):
         back_populates="planning",
         cascade="all, delete-orphan",
     )
+    preparation = relationship("MarketPreparation", back_populates="planning", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<MarketPlanning(id={self.id}, number='{self.planning_number}')>"

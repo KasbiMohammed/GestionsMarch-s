@@ -9,6 +9,7 @@ from app.database import SessionLocal, Base, engine
 from app.models.user import User, UserRole
 from app.models.market import Market, MarketStatus, MarketType
 from app.models.stage import Stage, StageStatus
+from app.models.annual_planning import Service
 from app.services.stage_service import StageService
 from app.services.auth_service import AuthService
 from app.utils.security import get_password_hash
@@ -40,7 +41,7 @@ def seed_users(db: Session):
             'email': 'directeur@commune.ma',
             'password': 'directeur123',
             'full_name': 'Fatima Zahra',
-            'role': UserRole.DIRECTEUR_SERVICES,
+            'role': UserRole.DIRECTEUR_GENERAL_SERVICES,
             'phone': '+212600000003'
         },
         {
@@ -110,6 +111,76 @@ def seed_users(db: Session):
             print(f"  - Utilisateur existe déjà: {user_data['username']}")
     
     return created_users
+
+
+def seed_services(db: Session):
+    """Crée les services de la commune"""
+    print("\nCréation des services...")
+    
+    services_data = [
+        {
+            'code': 'SRV001',
+            'name': 'مصلحة التعمير والممتلكات',
+            'description': 'Service de l\'urbanisme et des propriétés'
+        },
+        {
+            'code': 'SRV002',
+            'name': 'مصلحة حفظ الصحة والبيئة والاشغال الجماعية',
+            'description': 'Service de la santé, de l\'environnement et des travaux publics'
+        },
+        {
+            'code': 'SRV003',
+            'name': 'مصلحة الشؤون القانونية والمنازعات',
+            'description': 'Service des affaires juridiques et des litiges'
+        },
+        {
+            'code': 'SRV004',
+            'name': 'رئيس مصلحة الموارد المالية',
+            'description': 'Chef du service des ressources financières'
+        },
+        {
+            'code': 'SRV005',
+            'name': 'مصلحة دراسات الصفقات وتتبع الأشغال',
+            'description': 'Service des études de marchés et du suivi des travaux'
+        },
+        {
+            'code': 'SRV006',
+            'name': 'رئيس مصلحة الميزانية والشؤون المالية',
+            'description': 'Chef du service du budget et des affaires financières'
+        },
+        {
+            'code': 'SRV007',
+            'name': 'مصلحة تدبير الموارد البشرية وتقوية القدرات',
+            'description': 'Service de la gestion des ressources humaines et du renforcement des capacités'
+        },
+        {
+            'code': 'SRV008',
+            'name': 'مصلحة الشؤون الاجتماعية والثقافية والرياضية وتدبير المرافق العمومية',
+            'description': 'Service des affaires sociales, culturelles et sportives et de la gestion des équipements publics'
+        },
+        {
+            'code': 'SRV009',
+            'name': 'مصلحة الحالة المدنية وتصحيح الإمضاء والشرطة الإدارية والرخص الاقتصادية',
+            'description': 'Service de l\'état civil, de la correction de signature, de la police administrative et des licences économiques'
+        }
+    ]
+    
+    created_services = []
+    for service_data in services_data:
+        # Vérifier si le service existe déjà
+        existing = db.query(Service).filter(Service.code == service_data['code']).first()
+        if not existing:
+            service = Service(**service_data)
+            db.add(service)
+            db.commit()
+            db.refresh(service)
+            created_services.append(service)
+            print(f"  ✓ Service créé: {service_data['code']} - {service_data['name']}")
+        else:
+            created_services.append(existing)
+            print(f"  - Service existe déjà: {service_data['code']} - {service_data['name']}")
+    
+    return created_services
 
 
 def seed_markets(db: Session, users: dict):
@@ -350,6 +421,9 @@ def main():
         
         # Peupler les utilisateurs
         users = seed_users(db)
+        
+        # Peupler les services
+        services = seed_services(db)
         
         # Peupler les marchés
         markets = seed_markets(db, users)

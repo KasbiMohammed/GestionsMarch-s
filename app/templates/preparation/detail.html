@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block title %}Détail Préparation - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Détail de la Préparation</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/preparation" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+        <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="editPreparation()">
+            <i class="bi bi-pencil"></i> Modifier
+        </button>
+        <button type="button" class="btn btn-sm btn-success me-2" id="startValidationBtn" onclick="startValidation()" style="display: none;">
+            <i class="bi bi-shield-check"></i> Démarrer validation
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deletePreparation()">
+            <i class="bi bi-trash"></i> Supprimer
+        </button>
+    </div>
+</div>
+
+<div id="preparationDetail">
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Chargement...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let preparationId = window.location.pathname.split('/').pop();
+
+// Helper functions
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadPreparationDetail();
+});
+
+async function loadPreparationDetail() {
+    try {
+        const response = await authenticatedFetch(`/api/market-preparation/${preparationId}`);
+        const prep = await response.json();
+        
+        displayPreparationDetail(prep);
+    } catch (error) {
+        console.error('Erreur lors du chargement:', error);
+        document.getElementById('preparationDetail').innerHTML = `
+            <div class="alert alert-danger">
+                Erreur lors du chargement de la préparation
+            </div>`;
+    }
+}
+
+function displayPreparationDetail(prep) {
+    const statusColors = {
+        'en_preparation': 'warning',
+        'en_cours': 'primary',
+        'en_attente_validation': 'info',
+        'valide': 'success',
+        'rejete': 'danger'
+    };
+    
+    const statusLabels = {
+        'en_preparation': 'En préparation',
+        'en_cours': 'En cours',
+        'en_attente_validation': 'En attente de validation',
+        'valide': 'Validé',
+        'rejete': 'Rejeté'
+    };
+    
+    document.getElementById('preparationDetail').innerHTML = `
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Informations générales</h5>
+                        <span class="badge bg-${statusColors[prep.status] || 'secondary'}">${statusLabels[prep.status] || prep.status}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="text-muted small">Numéro</label>
+                                <p><strong>${prep.preparation_number || '-'}</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Progression</label>
+                                <p>
+                                    <div class="progress" style="height: 25px;">
+                                        <div class="progress-bar" role="progressbar" style="width: ${prep.progress_percentage}%;">${prep.progress_percentage}%</div>
+                                    </div>
+                                </p>
+                            </div>
+                            <div class="col-12">
+                                <label class="text-muted small">Objet</label>
+                                <p><strong>${prep.object}</strong></p>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="text-muted small">Type de procédure</label>
+                                <p>${prep.procurement_type || '-'}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="text-muted small">Procédure</label>
+                                <p>${prep.procedure_type || '-'}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="text-muted small">Durée</label>
+                                <p>${prep.duration ? prep.duration + ' jours' : '-'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Service demandeur</label>
+                                <p>${prep.requesting_service || '-'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Lieu</label>
+                                <p>${prep.location || '-'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Budget</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="text-muted small">Budget estimatif</label>
+                            <h3 class="text-primary">${formatAmount(prep.estimated_budget)}</h3>
+                        </div>
+                        <div>
+                            <label class="text-muted small">Source de financement</label>
+                            <p>${prep.funding_source || '-'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Validations</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card ${prep.technical_validation ? 'border-success' : 'border-warning'} mb-2">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Validation Technique</h6>
+                                        <p class="card-text">
+                                            ${prep.technical_validation ? 
+                                                '<span class="badge bg-success">Validé</span>' : 
+                                                '<span class="badge bg-warning">En attente</span>'}
+                                        </p>
+                                        ${prep.technical_validation_date ? `<small class="text-muted">Le ${formatDate(prep.technical_validation_date)}</small>` : ''}
+                                        ${prep.technical_validation_comments ? `<p class="mt-2 small">${prep.technical_validation_comments}</p>` : ''}
+                                        ${!prep.technical_validation ? `<button class="btn btn-sm btn-outline-primary mt-2" onclick="validatePreparation('technical')">Valider</button>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card ${prep.financial_validation ? 'border-success' : 'border-warning'} mb-2">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Validation Financière</h6>
+                                        <p class="card-text">
+                                            ${prep.financial_validation ? 
+                                                '<span class="badge bg-success">Validé</span>' : 
+                                                '<span class="badge bg-warning">En attente</span>'}
+                                        </p>
+                                        ${prep.financial_validation_date ? `<small class="text-muted">Le ${formatDate(prep.financial_validation_date)}</small>` : ''}
+                                        ${prep.financial_validation_comments ? `<p class="mt-2 small">${prep.financial_validation_comments}</p>` : ''}
+                                        ${!prep.financial_validation ? `<button class="btn btn-sm btn-outline-primary mt-2" onclick="validatePreparation('financial')">Valider</button>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card ${prep.administrative_validation ? 'border-success' : 'border-warning'} mb-2">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Validation Administrative</h6>
+                                        <p class="card-text">
+                                            ${prep.administrative_validation ? 
+                                                '<span class="badge bg-success">Validé</span>' : 
+                                                '<span class="badge bg-warning">En attente</span>'}
+                                        </p>
+                                        ${prep.administrative_validation_date ? `<small class="text-muted">Le ${formatDate(prep.administrative_validation_date)}</small>` : ''}
+                                        ${prep.administrative_validation_comments ? `<p class="mt-2 small">${prep.administrative_validation_comments}</p>` : ''}
+                                        ${!prep.administrative_validation ? `<button class="btn btn-sm btn-outline-primary mt-2" onclick="validatePreparation('administrative')">Valider</button>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Documents</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="showUploadModal()">
+                            <i class="bi bi-upload"></i> Ajouter
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="documentsList">
+                            ${prep.documents.length === 0 ? 
+                                '<p class="text-muted">Aucun document</p>' : 
+                                prep.documents.map(doc => `
+                                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                                        <div>
+                                            <strong>${doc.title}</strong>
+                                            <br>
+                                            <small class="text-muted">${doc.document_type}</small>
+                                        </div>
+                                        <div>
+                                            ${doc.is_uploaded ? '<span class="badge bg-success">Téléchargé</span>' : '<span class="badge bg-warning">À télécharger</span>'}
+                                            ${doc.is_uploaded ? `<button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteDocument(${doc.id})"><i class="bi bi-trash"></i></button>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Alertes</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="alertsList">
+                            ${prep.alerts.length === 0 ? 
+                                '<p class="text-muted">Aucune alerte</p>' : 
+                                prep.alerts.map(alert => `
+                                    <div class="alert alert-${alert.severity === 'high' ? 'danger' : alert.severity === 'medium' ? 'warning' : 'info'} d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>${alert.title}</strong>
+                                            <p class="mb-0 small">${alert.message}</p>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="resolveAlert(${alert.id})">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Observations</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>${prep.observations || 'Aucune observation'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Historique</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                        <th>Utilisateur</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${prep.history.length === 0 ? 
+                                        '<tr><td colspan="4" class="text-center">Aucun historique</td></tr>' : 
+                                        prep.history.map(h => `
+                                            <tr>
+                                                <td>${formatDate(h.created_at)}</td>
+                                                <td>${h.action}</td>
+                                                <td>${h.user_name || '-'}</td>
+                                                <td>${h.description || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function formatAmount(amount) {
+    if (!amount) return '0,00 MAD';
+    return new Intl.NumberFormat('fr-MA', {
+        style: 'currency',
+        currency: 'MAD'
+    }).format(amount);
+}
+
+function formatDate(date) {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR');
+}
+
+function editPreparation() {
+    window.location.href = `/preparation/edit/${preparationId}`;
+}
+
+function deletePreparation() {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette préparation ?')) {
+        authenticatedFetch(`/api/market-preparation/${preparationId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                showNotification('Préparation supprimée', 'success');
+                window.location.href = '/preparation';
+            } else {
+                showNotification('Erreur lors de la suppression', 'danger');
+            }
+        });
+    }
+}
+
+function validatePreparation(type) {
+    const comments = prompt('Commentaires de validation (optionnel):');
+    
+    authenticatedFetch(`/api/market-preparation/${preparationId}/validate`, {
+        method: 'POST',
+        body: JSON.stringify({
+            validation_type: type,
+            comments: comments,
+            approved: true
+        })
+    }).then(response => {
+        if (response.ok) {
+            showNotification('Validation enregistrée', 'success');
+            loadPreparationDetail();
+        } else {
+            showNotification('Erreur lors de la validation', 'danger');
+        }
+    });
+}
+
+function showUploadModal() {
+    showNotification('Fonctionnalité de téléchargement en cours de développement', 'info');
+}
+
+function deleteDocument(docId) {
+    if (confirm('Supprimer ce document ?')) {
+        authenticatedFetch(`/api/market-preparation/documents/${docId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                showNotification('Document supprimé', 'success');
+                loadPreparationDetail();
+            } else {
+                showNotification('Erreur lors de la suppression', 'danger');
+            }
+        });
+    }
+}
+
+function resolveAlert(alertId) {
+    authenticatedFetch(`/api/market-preparation/alerts/${alertId}/resolve`, {
+        method: 'POST'
+    }).then(response => {
+        if (response.ok) {
+            showNotification('Alerte résolue', 'success');
+            loadPreparationDetail();
+        } else {
+            showNotification('Erreur lors de la résolution', 'danger');
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}Détail Validation - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Détail de la Validation</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/validation" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteWorkflow()">
+            <i class="bi bi-trash"></i> Supprimer
+        </button>
+    </div>
+</div>
+
+<div id="workflowDetail">
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Chargement...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let workflowId = window.location.pathname.split('/').pop();
+
+// Helper functions
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadWorkflowDetail();
+});
+
+async function loadWorkflowDetail() {
+    try {
+        const response = await authenticatedFetch(`/api/validation-workflow/${workflowId}`);
+        const wf = await response.json();
+        
+        displayWorkflowDetail(wf);
+    } catch (error) {
+        console.error('Erreur lors du chargement:', error);
+        document.getElementById('workflowDetail').innerHTML = `
+            <div class="alert alert-danger">
+                Erreur lors du chargement du workflow
+            </div>`;
+    }
+}
+
+function displayWorkflowDetail(wf) {
+    const statusColors = {
+        'en_attente_validation': 'warning',
+        'en_cours_validation': 'primary',
+        'a_completer': 'info',
+        'valide': 'success',
+        'rejete': 'danger'
+    };
+    
+    const statusLabels = {
+        'en_attente_validation': 'En attente de validation',
+        'en_cours_validation': 'En cours de validation',
+        'a_completer': 'À compléter',
+        'valide': 'Validé',
+        'rejete': 'Rejeté'
+    };
+    
+    const stepLabels = {
+        'service_demandeur': 'Service demandeur',
+        'service_technique': 'Service technique',
+        'service_financier': 'Service financier',
+        'service_marches': 'Service des marchés',
+        'ordonnateur': 'Ordonnateur'
+    };
+    
+    document.getElementById('workflowDetail').innerHTML = `
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Informations générales</h5>
+                        <span class="badge bg-${statusColors[wf.status] || 'secondary'}">${statusLabels[wf.status] || wf.status}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="text-muted small">Numéro de workflow</label>
+                                <p><strong>${wf.workflow_number || '-'}</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Préparation ID</label>
+                                <p><a href="/preparation/${wf.preparation_id}">${wf.preparation_id}</a></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Étape actuelle</label>
+                                <p>${stepLabels[wf.current_step] || wf.current_step}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Conformité</label>
+                                <p>
+                                    <div class="progress" style="height: 25px;">
+                                        <div class="progress-bar ${wf.conformity_percentage >= 80 ? 'bg-success' : wf.conformity_percentage >= 50 ? 'bg-warning' : 'bg-danger'}" role="progressbar" style="width: ${wf.conformity_percentage}%;">${wf.conformity_percentage}%</div>
+                                    </div>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Date de début</label>
+                                <p>${wf.started_at ? formatDate(wf.started_at) : '-'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Date de fin</label>
+                                <p>${wf.completed_at ? formatDate(wf.completed_at) : '-'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Progression des étapes</h5>
+                    </div>
+                    <div class="card-body">
+                        ${getStepProgressVisualization(wf.current_step)}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Checklist de conformité</h5>
+                    </div>
+                    <div class="card-body">
+                        ${wf.checklist ? displayChecklist(wf.checklist) : '<p class="text-muted">Aucune checklist</p>'}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Validations par étape</h5>
+                    </div>
+                    <div class="card-body">
+                        ${wf.validations.length === 0 ? 
+                            '<p class="text-muted">Aucune validation</p>' : 
+                            wf.validations.map(val => displayValidationRecord(val)).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Alertes</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="alertsList">
+                            ${wf.alerts.length === 0 ? 
+                                '<p class="text-muted">Aucune alerte</p>' : 
+                                wf.alerts.map(alert => `
+                                    <div class="alert alert-${alert.severity === 'high' ? 'danger' : alert.severity === 'medium' ? 'warning' : 'info'} d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>${alert.title}</strong>
+                                            <p class="mb-0 small">${alert.message}</p>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="resolveAlert(${alert.id})">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Observations globales</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>${wf.global_observations || 'Aucune observation'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Historique</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                        <th>Utilisateur</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${wf.history.length === 0 ? 
+                                        '<tr><td colspan="4" class="text-center">Aucun historique</td></tr>' : 
+                                        wf.history.map(h => `
+                                            <tr>
+                                                <td>${formatDate(h.created_at)}</td>
+                                                <td>${h.action}</td>
+                                                <td>${h.user_name || '-'}</td>
+                                                <td>${h.description || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getStepProgressVisualization(currentStep) {
+    const steps = [
+        { key: 'service_demandeur', label: 'Service demandeur' },
+        { key: 'service_technique', label: 'Service technique' },
+        { key: 'service_financier', label: 'Service financier' },
+        { key: 'service_marches', label: 'Service des marchés' },
+        { key: 'ordonnateur', label: 'Ordonnateur' }
+    ];
+    
+    const currentIndex = steps.findIndex(s => s.key === currentStep);
+    
+    let html = '<div class="d-flex flex-column gap-2">';
+    steps.forEach((step, index) => {
+        const status = index < currentIndex ? 'completed' : index === currentIndex ? 'current' : 'pending';
+        const icon = status === 'completed' ? 'bi-check-circle-fill' : status === 'current' ? 'bi-arrow-right-circle-fill' : 'bi-circle';
+        const color = status === 'completed' ? 'text-success' : status === 'current' ? 'text-primary' : 'text-muted';
+        
+        html += `
+            <div class="d-flex align-items-center">
+                <i class="bi ${icon} ${color} me-2"></i>
+                <span class="${status === 'current' ? 'fw-bold' : ''}">${step.label}</span>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    return html;
+}
+
+function displayChecklist(checklist) {
+    const criteria = [
+        { key: 'documents_complete', label: 'Documents complets', obs: 'documents_observations' },
+        { key: 'budget_valid', label: 'Budget valide', obs: 'budget_observations' },
+        { key: 'estimates_valid', label: 'Estimations valides', obs: 'estimates_observations' },
+        { key: 'signatures_valid', label: 'Signatures valides', obs: 'signatures_observations' },
+        { key: 'information_coherent', label: 'Informations cohérentes', obs: 'information_observations' },
+        { key: 'regulatory_compliance', label: 'Conformité réglementaire', obs: 'regulatory_observations' }
+    ];
+    
+    let html = '<div class="row">';
+    criteria.forEach(c => {
+        const value = checklist[c.key];
+        const obs = checklist[c.obs];
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi ${value ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'} me-2"></i>
+                    <span>${c.label}</span>
+                </div>
+                ${obs ? `<small class="text-muted d-block ms-4">${obs}</small>` : ''}
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    return html;
+}
+
+function displayValidationRecord(val) {
+    const stepLabels = {
+        'service_demandeur': 'Service demandeur',
+        'service_technique': 'Service technique',
+        'service_financier': 'Service financier',
+        'service_marches': 'Service des marchés',
+        'ordonnateur': 'Ordonnateur'
+    };
+    
+    const decisionColors = {
+        'en_attente': 'secondary',
+        'valide': 'success',
+        'rejete': 'danger',
+        'a_completer': 'warning'
+    };
+    
+    const decisionLabels = {
+        'en_attente': 'En attente',
+        'valide': 'Validé',
+        'rejete': 'Rejeté',
+        'a_completer': 'À compléter'
+    };
+    
+    return `
+        <div class="card mb-3 ${val.decision === 'valide' ? 'border-success' : val.decision === 'rejete' ? 'border-danger' : 'border-secondary'}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">${stepLabels[val.step] || val.step}</h6>
+                    <span class="badge bg-${decisionColors[val.decision] || 'secondary'}">${decisionLabels[val.decision] || val.decision}</span>
+                </div>
+                ${val.validator_name ? `<p class="mb-1 small text-muted">Validateur: ${val.validator_name} (${val.validator_role})</p>` : ''}
+                ${val.validated_at ? `<p class="mb-1 small text-muted">Date: ${formatDate(val.validated_at)}</p>` : ''}
+                ${val.observations ? `<p class="mb-1 small"><strong>Observations:</strong> ${val.observations}</p>` : ''}
+                ${val.comments ? `<p class="mb-1 small"><strong>Commentaires:</strong> ${val.comments}</p>` : ''}
+                ${val.return_reason ? `<p class="mb-0 small text-danger"><strong>Raison de retour:</strong> ${val.return_reason}</p>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function formatDate(date) {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR');
+}
+
+function deleteWorkflow() {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce workflow ?')) {
+        authenticatedFetch(`/api/validation-workflow/${workflowId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                showNotification('Workflow supprimé', 'success');
+                window.location.href = '/validation';
+            } else {
+                showNotification('Erreur lors de la suppression', 'danger');
+            }
+        });
+    }
+}
+
+function resolveAlert(alertId) {
+    authenticatedFetch(`/api/validation-workflow/alerts/${alertId}/resolve`, {
+        method: 'POST'
+    }).then(response => {
+        if (response.ok) {
+            showNotification('Alerte résolue', 'success');
+            loadWorkflowDetail();
+        } else {
+            showNotification('Erreur lors de la résolution', 'danger');
+        }
+    });
+}
+</script>
+{% endblock %}

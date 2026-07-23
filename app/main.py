@@ -14,7 +14,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from app.config import settings
 from app.database import engine, get_db, init_db
-from app.api import auth, users, markets, stages, documents, dashboard, search, exports, analysis, market_planning
+from app.api import auth, users, markets, stages, documents, dashboard, search, exports, analysis, market_planning, market_preparation, validation_workflow
 
 # Création de l'application FastAPI
 app = FastAPI(
@@ -152,6 +152,8 @@ app.include_router(search.router, prefix="/api/search", tags=["Search"])
 app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["Analysis"])
 app.include_router(market_planning.router, prefix="/api/market-planning", tags=["Market Planning"])
+app.include_router(market_preparation.router, prefix="/api/market-preparation", tags=["Market Preparation"])
+app.include_router(validation_workflow.router, prefix="/api/validation-workflow", tags=["Validation Workflow"])
 
 
 # Routes pages HTML
@@ -312,6 +314,81 @@ async def planification_edit_page(request: Request, planning_id: int, db: Sessio
             "current_year": planning.fiscal_year
         }
     )
+
+
+@app.get("/preparation", response_class=HTMLResponse)
+async def preparation_page(request: Request, db: Session = Depends(get_db)):
+    """Page de gestion de la préparation des marchés"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("preparation/list.html", {"request": request, "user": user})
+
+
+@app.get("/preparation/new", response_class=HTMLResponse)
+async def preparation_new_page(request: Request, db: Session = Depends(get_db)):
+    """Page de création d'une préparation"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    
+    planning_id = request.query_params.get("planning_id")
+    
+    return templates.TemplateResponse(
+        "preparation/form.html",
+        {
+            "request": request,
+            "user": user,
+            "planning_id": planning_id
+        }
+    )
+
+
+@app.get("/preparation/{preparation_id}", response_class=HTMLResponse)
+async def preparation_detail_page(request: Request, preparation_id: int, db: Session = Depends(get_db)):
+    """Page de détail d'une préparation"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("preparation/detail.html", {"request": request, "user": user})
+
+
+@app.get("/validation", response_class=HTMLResponse)
+async def validation_page(request: Request, db: Session = Depends(get_db)):
+    """Page de gestion de la validation des dossiers"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("validation/list.html", {"request": request, "user": user})
+
+
+@app.get("/validation/{workflow_id}", response_class=HTMLResponse)
+async def validation_detail_page(request: Request, workflow_id: int, db: Session = Depends(get_db)):
+    """Page de détail d'un workflow de validation"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("validation/detail.html", {"request": request, "user": user})
 
 
 if __name__ == "__main__":
