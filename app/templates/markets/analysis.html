@@ -163,6 +163,61 @@
 <script>
 let currentAnalysisData = null;
 
+// Helper function to get authentication token
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+// Helper function to make authenticated fetch calls
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+// Utility functions
+function formatAmount(amount) {
+    if (!amount) return '0,00 MAD';
+    return new Intl.NumberFormat('fr-MA', {
+        style: 'currency',
+        currency: 'MAD'
+    }).format(amount);
+}
+
+function showLoading(button) {
+    button.dataset.originalText = button.innerHTML;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Chargement...';
+    button.disabled = true;
+}
+
+function hideLoading(button, originalText) {
+    button.innerHTML = originalText;
+    button.disabled = false;
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
 document.getElementById('analysisForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -174,9 +229,8 @@ document.getElementById('analysisForm').addEventListener('submit', async functio
     showLoading(button);
     
     try {
-        const response = await fetch('/api/analysis/analyze', {
+        const response = await authenticatedFetch('/api/analysis/analyze', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, method })
         });
         
@@ -293,9 +347,8 @@ async function importMarket() {
     const url = document.getElementById('marketUrl').value;
     
     try {
-        const response = await fetch('/api/analysis/import', {
+        const response = await authenticatedFetch('/api/analysis/import', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url })
         });
         

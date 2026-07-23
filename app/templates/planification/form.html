@@ -249,6 +249,42 @@
 
 {% block extra_js %}
 <script>
+// Helper function to get authentication token
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+// Helper function to make authenticated fetch calls
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+// Utility functions
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
 async function generateNumber() {
     const fiscalYear = document.querySelector('input[name="fiscal_year"]').value;
     if (!fiscalYear) {
@@ -257,7 +293,7 @@ async function generateNumber() {
     }
     
     try {
-        const response = await fetch(`/api/market-planning/generate-number?fiscal_year=${fiscalYear}`);
+        const response = await authenticatedFetch(`/api/market-planning/generate-number?fiscal_year=${fiscalYear}`);
         const data = await response.json();
         document.querySelector('input[name="planning_number"]').value = data.planning_number;
         showNotification('Numéro généré avec succès', 'success');
@@ -302,9 +338,8 @@ document.getElementById('planningForm').addEventListener('submit', async functio
         const url = planningId ? `/api/market-planning/${planningId}` : '/api/market-planning/';
         const method = planningId ? 'PUT' : 'POST';
         
-        const response = await fetch(url, {
+        const response = await authenticatedFetch(url, {
             method: method,
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         

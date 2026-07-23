@@ -22,7 +22,7 @@
 </div>
 
 <!-- Message si aucune donnée -->
-<div id="emptyStateMessage" class="alert alert-info d-none">
+<div id="emptyStateMessage" class="alert alert-info">
     <h5><i class="bi bi-info-circle"></i> Bienvenue dans votre tableau de bord</h5>
     <p>Votre base de données est actuellement vide. Commencez par créer votre première planification ou votre premier marché.</p>
     <div class="mt-3">
@@ -49,7 +49,6 @@
                         <i class="bi bi-list-check" style="font-size: 2rem;"></i>
                     </div>
                 </div>
-                <a href="/markets" class="stretched-link"></a>
             </div>
         </div>
     </div>
@@ -316,11 +315,35 @@
 
 {% block extra_js %}
 <script>
-let statusChart, typeChart;
+let statusChart = null;
+let typeChart = null;
 
-// Fonctions utilitaires globales (indépendantes de App)
+// Helper function to get authentication token
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+// Helper function to make authenticated fetch calls
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+// Fonctions utilitaires globales
 function formatAmount(amount) {
-    if (amount === null || amount === undefined || isNaN(amount)) return '0,00 MAD';
+    if (amount === null || amount === undefined || isNaN(amount)) {
+        return '0,00 MAD';
+    }
     return new Intl.NumberFormat('fr-MA', {
         style: 'currency',
         currency: 'MAD'
@@ -330,6 +353,7 @@ function formatAmount(amount) {
 function formatDate(date) {
     if (!date) return '-';
     const d = new Date(date);
+    if (isNaN(d.getTime())) return '-';
     return d.toLocaleDateString('fr-FR');
 }
 
@@ -359,7 +383,7 @@ function getStatusLabel(status) {
     return labels[status] || status;
 }
 
-function showNotification(message, type = 'info') {
+function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
     notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
@@ -368,7 +392,6 @@ function showNotification(message, type = 'info') {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     document.body.appendChild(notification);
-    
     setTimeout(() => {
         if (notification.parentNode) notification.remove();
     }, 5000);
@@ -380,36 +403,45 @@ function exportDashboard() {
 
 async function loadDashboardData() {
     try {
-        // Charger les statistiques
-        const statsResponse = await fetch('/api/dashboard/statistics');
-        if (!statsResponse.ok) throw new Error('Erreur API statistiques');
+        // 1. Charger les statistiques principales
+        const statsResponse = await authenticatedFetch('/api/dashboard/statistics');
+        if (!statsResponse.ok) {
+            throw new Error(`HTTP ${statsResponse.status}: ${statsResponse.statusText}`);
+        }
         const stats = await statsResponse.json();
         
-        // Vérifier si données vides
-        const totalItems = (stats.markets?.total || 0) + (stats.planning?.total || 0);
-        const emptyStateMsg = document.getElementById('emptyStateMessage');
-        if (emptyStateMsg) {
-            emptyStateMsg.classList.toggle('d-none', totalItems > 0);
+        // Vérifier que stats a la bonne structure
+        if (!stats || !stats.markets) {
+            throw new Error('Structure JSON invalide');
         }
         
-        // Mettre à jour les cartes de statistiques
-        document.getElementById('totalMarkets').textContent = stats.markets?.total ?? 0;
-        document.getElementById('enCoursMarkets').textContent = stats.markets?.en_cours ?? 0;
-        document.getElementById('enRetardMarkets').textContent = stats.markets?.en_retard ?? 0;
-        document.getElementById('termineMarkets').textContent = stats.markets?.termine ?? 0;
+        // Calculer total pour afficher/masquer message vide
+        const totalItems = (stats.markets.total || 0) + (stats.planning?.total || 0);
+        const emptyStateMsg = document.getElementById('emptyStateMessage');
+        if (emptyStateMsg) {
+            emptyStateMsg.style.display = totalItems > 0 ? 'none' : 'block';
+        }
         
+        // Mettre à jour les cartes (avec valeurs par défaut 0)
+        document.getElementById('totalMarkets').textContent = stats.markets.total ?? 0;
+        document.getElementById('enCoursMarkets').textContent = stats.markets.en_cours ?? 0;
+        document.getElementById('enRetardMarkets').textContent = stats.markets.en_retard ?? 0;
+        document.getElementById('termineMarkets').textContent = stats.markets.termine ?? 0;
+        
+        // Montants
         document.getElementById('totalEstimated').textContent = formatAmount(stats.amounts?.total_estimated);
         document.getElementById('totalDefinitive').textContent = formatAmount(stats.amounts?.total_definitive);
         
-        const avgProgress = stats.progress?.average ?? 0;
-        document.getElementById('avgProgress').textContent = Number(avgProgress).toFixed(1) + '%';
+        // Progression
+        const avgProgress = parseFloat(stats.progress?.average) || 0;
+        document.getElementById('avgProgress').textContent = avgProgress.toFixed(1) + '%';
         const progressBar = document.getElementById('avgProgressBar');
         if (progressBar) {
             progressBar.style.width = avgProgress + '%';
-            progressBar.textContent = Number(avgProgress).toFixed(1) + '%';
+            progressBar.textContent = avgProgress.toFixed(1) + '%';
         }
         
-        // Statistiques de planification
+        // Planification
         if (stats.planning) {
             document.getElementById('planningTotal').textContent = stats.planning.total ?? 0;
             document.getElementById('planningBudget').textContent = formatAmount(stats.planning.budget);
@@ -417,65 +449,92 @@ async function loadDashboardData() {
             document.getElementById('planningProgrammed').textContent = stats.planning.programmed ?? 0;
         }
         
-        // Masquer bouton planification vide si des données existent
+        // Masquer bouton planification si données existent
         const planningEmptyActions = document.getElementById('planningEmptyActions');
         if (planningEmptyActions) {
-            planningEmptyActions.classList.toggle('d-none', (stats.planning?.total ?? 0) > 0);
+            planningEmptyActions.style.display = (stats.planning?.total ?? 0) > 0 ? 'none' : 'block';
         }
         
-        // Charger les données pour les graphiques
+        // 2. Charger les graphiques (avec gestion d'erreur séparée)
+        await loadCharts();
+        
+        // 3. Charger les tableaux (avec gestion d'erreur séparée)
+        await loadRecentMarkets();
+        await loadLateStages();
+        
+    } catch (error) {
+        console.error('Erreur dashboard:', error);
+        showNotification('Erreur lors du chargement des données: ' + error.message, 'danger');
+    }
+}
+
+async function loadCharts() {
+    try {
         const [statusResponse, typeResponse] = await Promise.all([
-            fetch('/api/dashboard/markets-by-status'),
-            fetch('/api/dashboard/markets-by-type')
+            authenticatedFetch('/api/dashboard/markets-by-status'),
+            authenticatedFetch('/api/dashboard/markets-by-type')
         ]);
+        
+        if (!statusResponse.ok || !typeResponse.ok) {
+            throw new Error('Erreur API graphiques');
+        }
         
         const statusData = await statusResponse.json();
         const typeData = await typeResponse.json();
         
-        // Vérifier si données graphiques vides
-        const statusTotal = Object.values(statusData).reduce((a, b) => a + b, 0);
-        const typeTotal = Object.values(typeData).reduce((a, b) => a + b, 0);
+        // Vérifier si données vides
+        const statusValues = Object.values(statusData || {});
+        const typeValues = Object.values(typeData || {});
+        const statusTotal = statusValues.reduce((a, b) => a + (b || 0), 0);
+        const typeTotal = typeValues.reduce((a, b) => a + (b || 0), 0);
         
+        // Graphique statut
+        const statusCanvas = document.getElementById('statusChart');
+        const statusEmpty = document.getElementById('statusChartEmpty');
         if (statusTotal === 0) {
-            document.getElementById('statusChart').style.display = 'none';
-            document.getElementById('statusChartEmpty').classList.remove('d-none');
+            if (statusCanvas) statusCanvas.style.display = 'none';
+            if (statusEmpty) statusEmpty.classList.remove('d-none');
         } else {
-            document.getElementById('statusChart').style.display = 'block';
-            document.getElementById('statusChartEmpty').classList.add('d-none');
+            if (statusCanvas) statusCanvas.style.display = 'block';
+            if (statusEmpty) statusEmpty.classList.add('d-none');
             createStatusChart(statusData);
         }
         
+        // Graphique type
+        const typeCanvas = document.getElementById('typeChart');
+        const typeEmpty = document.getElementById('typeChartEmpty');
         if (typeTotal === 0) {
-            document.getElementById('typeChart').style.display = 'none';
-            document.getElementById('typeChartEmpty').classList.remove('d-none');
+            if (typeCanvas) typeCanvas.style.display = 'none';
+            if (typeEmpty) typeEmpty.classList.remove('d-none');
         } else {
-            document.getElementById('typeChart').style.display = 'block';
-            document.getElementById('typeChartEmpty').classList.add('d-none');
+            if (typeCanvas) typeCanvas.style.display = 'block';
+            if (typeEmpty) typeEmpty.classList.add('d-none');
             createTypeChart(typeData);
         }
         
-        // Charger les marchés récents
-        loadRecentMarkets();
-        
-        // Charger les étapes en retard
-        loadLateStages();
-        
     } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-        showNotification('Erreur lors du chargement des données du tableau de bord', 'danger');
+        console.error('Erreur graphiques:', error);
+        // Ne pas bloquer le reste du dashboard
     }
 }
 
 function createStatusChart(data) {
-    const ctx = document.getElementById('statusChart').getContext('2d');
+    const canvas = document.getElementById('statusChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
     if (statusChart) {
         statusChart.destroy();
+        statusChart = null;
     }
     
-    const labels = Object.keys(data).map(key => getStatusLabel(key));
-    const values = Object.values(data);
-    const total = values.reduce((a, b) => a + b, 0);
+    const labels = Object.keys(data || {}).map(key => getStatusLabel(key));
+    const values = Object.values(data || {});
+    const total = values.reduce((a, b) => a + (b || 0), 0);
+    
+    if (total === 0) return;
     
     statusChart = new Chart(ctx, {
         type: 'doughnut',
@@ -484,13 +543,7 @@ function createStatusChart(data) {
             datasets: [{
                 data: values,
                 backgroundColor: [
-                    '#6c757d',  // planifie
-                    '#0d6efd',  // en_cours
-                    '#198754',  // termine
-                    '#ffc107',  // en_attente
-                    '#dc3545',  // en_retard
-                    '#212529',  // annule
-                    '#0dcaf0'   // suspendu
+                    '#6c757d', '#0d6efd', '#198754', '#ffc107', '#dc3545', '#212529', '#0dcaf0'
                 ]
             }]
         },
@@ -498,33 +551,29 @@ function createStatusChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.parsed || 0;
-                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                            return `${label}: ${value} (${percentage}%)`;
-                        }
-                    }
-                }
+                legend: { position: 'bottom' }
             }
         }
     });
 }
 
 function createTypeChart(data) {
-    const ctx = document.getElementById('typeChart').getContext('2d');
+    const canvas = document.getElementById('typeChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
     if (typeChart) {
         typeChart.destroy();
+        typeChart = null;
     }
     
-    const labels = Object.keys(data).map(key => key.replace('_', ' ').toUpperCase());
-    const values = Object.values(data);
+    const labels = Object.keys(data || {}).map(key => key.replace('_', ' ').toUpperCase());
+    const values = Object.values(data || {});
+    const total = values.reduce((a, b) => a + (b || 0), 0);
+    
+    if (total === 0) return;
     
     typeChart = new Chart(ctx, {
         type: 'bar',
@@ -539,19 +588,9 @@ function createTypeChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
+            plugins: { legend: { display: false } },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,
-                        precision: 0
-                    }
-                }
+                y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
             }
         }
     });
@@ -559,27 +598,26 @@ function createTypeChart(data) {
 
 async function loadRecentMarkets() {
     try {
-        const response = await fetch('/api/dashboard/recent-markets?limit=5');
-        if (!response.ok) throw new Error('Erreur API marchés récents');
-        const markets = await response.json();
+        const response = await authenticatedFetch('/api/dashboard/recent-markets?limit=5');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
         
+        const markets = await response.json();
         const tbody = document.getElementById('recentMarketsTable');
+        if (!tbody) return;
+        
         tbody.innerHTML = '';
         
-        if (!markets || markets.length === 0) {
+        if (!Array.isArray(markets) || markets.length === 0) {
             tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center py-4">
-                        <div class="text-muted">
-                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
-                            <p class="mt-2">Aucun marché créé</p>
-                            <a href="/markets/new" class="btn btn-primary btn-sm">
-                                <i class="bi bi-plus-circle"></i> Créer un marché
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-            `;
+                <tr><td colspan="7" class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Aucun marché créé</p>
+                        <a href="/markets/new" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> Créer un marché
+                        </a>
+                    </div>
+                </td></tr>`;
             return;
         }
         
@@ -596,9 +634,7 @@ async function loadRecentMarkets() {
                 <td><span class="badge bg-${getStatusColor(market.status)}">${getStatusLabel(market.status)}</span></td>
                 <td>
                     <div class="progress" style="height: 20px;">
-                        <div class="progress-bar" role="progressbar" style="width: ${progress}%;">
-                            ${progress}%
-                        </div>
+                        <div class="progress-bar" role="progressbar" style="width: ${progress}%;">${progress}%</div>
                     </div>
                 </td>
                 <td>
@@ -610,65 +646,67 @@ async function loadRecentMarkets() {
             tbody.appendChild(row);
         });
     } catch (error) {
-        console.error('Erreur lors du chargement des marchés récents:', error);
+        console.error('Erreur marchés récents:', error);
         const tbody = document.getElementById('recentMarketsTable');
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="text-center py-4 text-danger">
-                    <i class="bi bi-exclamation-triangle"></i> Erreur de chargement
-                </td>
-            </tr>
-        `;
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">
+                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                <p class="mt-2">Aucun marché créé</p>
+                <a href="/markets/new" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle"></i> Créer un marché
+                </a>
+            </td></tr>`;
+        }
     }
 }
 
 async function loadLateStages() {
     try {
-        const response = await fetch('/api/dashboard/late-stages?limit=5');
-        if (!response.ok) throw new Error('Erreur API étapes en retard');
-        const stages = await response.json();
+        const response = await authenticatedFetch('/api/dashboard/late-stages?limit=5');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
         
+        const stages = await response.json();
         const tbody = document.getElementById('lateStagesTable');
+        if (!tbody) return;
+        
         tbody.innerHTML = '';
         
-        document.getElementById('lateStagesCount').textContent = stages?.length ?? 0;
+        const countBadge = document.getElementById('lateStagesCount');
+        if (countBadge) countBadge.textContent = Array.isArray(stages) ? stages.length : 0;
         
-        if (!stages || stages.length === 0) {
+        if (!Array.isArray(stages) || stages.length === 0) {
             tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center py-4">
-                        <div class="text-muted">
-                            <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
-                            <p class="mt-2">Aucune étape en retard</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
+                <tr><td colspan="6" class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Aucune étape en retard</p>
+                    </div>
+                </td></tr>`;
             return;
         }
         
         stages.forEach(stage => {
             const row = document.createElement('tr');
+            const alertClass = stage.alert_level === 'high' ? 'danger' : (stage.alert_level === 'medium' ? 'warning' : 'info');
             row.innerHTML = `
                 <td><strong>${stage.name || '-'}</strong></td>
                 <td>ID: ${stage.market_id || '-'}</td>
                 <td>${formatDate(stage.planned_date)}</td>
                 <td>${formatDate(stage.actual_date)}</td>
                 <td><span class="badge bg-danger">${stage.delay_days ?? 0} jours</span></td>
-                <td><span class="badge bg-${stage.alert_level === 'high' ? 'danger' : (stage.alert_level === 'medium' ? 'warning' : 'info')}">${stage.alert_level || 'normal'}</span></td>
+                <td><span class="badge bg-${alertClass}">${stage.alert_level || 'normal'}</span></td>
             `;
             tbody.appendChild(row);
         });
     } catch (error) {
-        console.error('Erreur lors du chargement des étapes en retard:', error);
+        console.error('Erreur étapes en retard:', error);
         const tbody = document.getElementById('lateStagesTable');
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center py-4 text-danger">
-                    <i class="bi bi-exclamation-triangle"></i> Erreur de chargement
-                </td>
-            </tr>
-        `;
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">
+                <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                <p class="mt-2">Aucune étape en retard</p>
+            </td></tr>`;
+        }
     }
 }
 
@@ -684,11 +722,10 @@ function refreshDashboard() {
             btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualiser';
             btn.disabled = false;
         }
-        showNotification('Tableau de bord actualisé', 'success');
     });
 }
 
-// Charger les données au démarrage
+// Charger au démarrage
 document.addEventListener('DOMContentLoaded', loadDashboardData);
 </script>
 {% endblock %}

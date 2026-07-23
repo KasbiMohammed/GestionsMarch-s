@@ -465,6 +465,27 @@ let totalPages = 1;
 let currentDeleteId = null;
 let currentPlanningId = null;
 
+// Helper function to get authentication token
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+// Helper function to make authenticated fetch calls
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
 // Charger les données au démarrage
 document.addEventListener('DOMContentLoaded', function() {
     loadServices();
@@ -476,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Charger les services
 async function loadServices() {
     try {
-        const response = await fetch('/api/market-planning/services');
+        const response = await authenticatedFetch('/api/market-planning/services');
         const services = await response.json();
         
         const serviceFilter = document.getElementById('serviceFilter');
@@ -494,7 +515,7 @@ async function loadServices() {
 // Charger les utilisateurs
 async function loadUsers() {
     try {
-        const response = await fetch('/api/users');
+        const response = await authenticatedFetch('/api/users');
         const users = await response.json();
         
         const responsibleId = document.getElementById('responsibleId');
@@ -509,9 +530,7 @@ async function loadUsers() {
 
 // Charger les planifications
 async function loadPlannings() {
-    const data = await response.json();
-
-    console.log("Réponse API planification :", data);
+    
     try {
         const params = new URLSearchParams({
             skip: (currentPage - 1) * pageSize,
@@ -527,7 +546,7 @@ async function loadPlannings() {
             sort_order: document.getElementById('sortOrder').value
         });
         
-        const response = await fetch(`/api/market-planning/?${params}`);
+        const response = await authenticatedFetch(`/api/market-planning/?${params}`);
         const data = await response.json();
         
         displayPlannings(data.items);
@@ -627,7 +646,7 @@ function goToPage(page) {
 // Charger les statistiques
 async function loadStatistics() {
     try {
-        const response = await fetch('/api/market-planning/statistics');
+        const response = await authenticatedFetch('/api/market-planning/statistics');
         const stats = await response.json();
         
         document.getElementById('totalCount').textContent = stats.total_count;
@@ -676,7 +695,7 @@ async function generateNumber() {
     if (!fiscalYear) return;
     
     try {
-        const response = await fetch(`/api/market-planning/generate-number?fiscal_year=${fiscalYear}`);
+        const response = await authenticatedFetch(`/api/market-planning/generate-number?fiscal_year=${fiscalYear}`);
         const data = await response.json();
         document.getElementById('planningNumber').value = data.planning_number;
     } catch (error) {
@@ -724,9 +743,8 @@ async function savePlanning() {
         const url = isUpdate ? `/api/market-planning/${planningId}` : '/api/market-planning/';
         const method = isUpdate ? 'PUT' : 'POST';
         
-        const response = await fetch(url, {
+        const response = await authenticatedFetch(url, {
             method: method,
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         
@@ -748,7 +766,7 @@ async function savePlanning() {
 // Modifier une planification
 async function editPlanning(id) {
     try {
-        const response = await fetch(`/api/market-planning/${id}`);
+        const response = await authenticatedFetch(`/api/market-planning/${id}`);
         const planning = await response.json();
         
         document.getElementById('modalTitle').textContent = 'Modifier la Planification';
@@ -797,7 +815,7 @@ function deletePlanning(id) {
 // Confirmer la suppression
 async function confirmDelete() {
     try {
-        const response = await fetch(`/api/market-planning/${currentDeleteId}`, {
+        const response = await authenticatedFetch(`/api/market-planning/${currentDeleteId}`, {
             method: 'DELETE'
         });
         
@@ -819,7 +837,7 @@ async function confirmDelete() {
 async function showDocuments(planningId) {
     currentPlanningId = planningId;
     try {
-        const response = await fetch(`/api/market-planning/${planningId}`);
+        const response = await authenticatedFetch(`/api/market-planning/${planningId}`);
         const planning = await response.json();
         
         displayDocuments(planning.documents || []);
@@ -867,7 +885,7 @@ function downloadDocument(docId) {
 // Supprimer un document
 async function deleteDocument(docId) {
     try {
-        const response = await fetch(`/api/market-planning/documents/${docId}`, {
+        const response = await authenticatedFetch(`/api/market-planning/documents/${docId}`, {
             method: 'DELETE'
         });
         
@@ -897,8 +915,14 @@ async function uploadDocument() {
     formData.append('name', nameInput.value);
     
     try {
+        const token = getAuthToken();
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
         const response = await fetch(`/api/market-planning/${currentPlanningId}/documents`, {
             method: 'POST',
+            headers: headers,
             body: formData
         });
         
