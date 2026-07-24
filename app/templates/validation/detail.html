@@ -9,6 +9,9 @@
         <a href="/validation" class="btn btn-sm btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> Retour
         </a>
+        <button type="button" class="btn btn-sm btn-success me-2" id="createCommissionBtn" onclick="createCommission()" style="display: none;">
+            <i class="bi bi-people"></i> Créer commission
+        </button>
         <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteWorkflow()">
             <i class="bi bi-trash"></i> Supprimer
         </button>
@@ -69,6 +72,17 @@ async function loadWorkflowDetail() {
     try {
         const response = await authenticatedFetch(`/api/validation-workflow/${workflowId}`);
         const wf = await response.json();
+        
+        // Check if commission exists
+        const commissionResponse = await authenticatedFetch(`/api/commission/workflow/${workflowId}`);
+        const commission = commissionResponse.ok ? await commissionResponse.json() : null;
+        
+        // Show/hide create commission button
+        const createBtn = document.getElementById('createCommissionBtn');
+        if (createBtn) {
+            // Only show if workflow is validated and no commission exists
+            createBtn.style.display = (wf.status === 'valide' && !commission) ? 'inline-block' : 'none';
+        }
         
         displayWorkflowDetail(wf);
     } catch (error) {
@@ -392,6 +406,32 @@ function resolveAlert(alertId) {
             showNotification('Erreur lors de la résolution', 'danger');
         }
     });
+}
+
+async function createCommission() {
+    try {
+        const response = await authenticatedFetch('/api/commission/', {
+            method: 'POST',
+            body: JSON.stringify({
+                workflow_id: workflowId,
+                title: `Commission pour workflow ${workflowId}`
+            })
+        });
+        
+        if (response.ok) {
+            const commission = await response.json();
+            showNotification('Commission créée', 'success');
+            setTimeout(() => {
+                window.location.href = `/commission/${commission.id}`;
+            }, 1500);
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de la création de la commission', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la création de la commission:', error);
+        showNotification('Erreur lors de la création de la commission', 'danger');
+    }
 }
 </script>
 {% endblock %}

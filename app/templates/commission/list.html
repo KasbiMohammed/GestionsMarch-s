@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Commissions - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Commissions</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="exportData()">
+            <i class="bi bi-download"></i> Exporter
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshData()">
+            <i class="bi bi-arrow-clockwise"></i> Actualiser
+        </button>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="searchInput" placeholder="Rechercher...">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tous les statuts</option>
+                    <option value="a_constituer">À constituer</option>
+                    <option value="constituee">Constituée</option>
+                    <option value="seances_planifiees">Séances planifiées</option>
+                    <option value="seance_en_cours">Séance en cours</option>
+                    <option value="seance_cloturee">Séance clôturée</option>
+                    <option value="commission_cloturee">Commission clôturée</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="sortBy">
+                    <option value="created_at">Date de création</option>
+                    <option value="commission_number">Numéro</option>
+                    <option value="title">Titre</option>
+                    <option value="status">Statut</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="sortOrder">
+                    <option value="desc">Décroissant</option>
+                    <option value="asc">Croissant</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100" onclick="loadCommissions()">
+                    <i class="bi bi-search"></i> Filtrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card border-primary">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Commissions</h6>
+                <h3 class="mb-0 text-primary" id="totalCount">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-warning">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">À Constituer</h6>
+                <h3 class="mb-0 text-warning" id="toConstituteCount">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-info">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">En Cours</h6>
+                <h3 class="mb-0 text-info" id="inProgressCount">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-success">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Clôturées</h6>
+                <h3 class="mb-0 text-success" id="closedCount">0</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Numéro</th>
+                        <th>Titre</th>
+                        <th>Membres</th>
+                        <th>Séances</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="commissionsTable">
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                <p class="mt-2">Aucune commission</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <div>
+        <span id="pageInfo">Page 1 sur 1</span>
+    </div>
+    <nav>
+        <ul class="pagination mb-0" id="pagination">
+        </ul>
+    </nav>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let pageSize = 20;
+let totalPages = 1;
+
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCommissions();
+    loadStatistics();
+});
+
+async function loadCommissions() {
+    try {
+        const params = new URLSearchParams({
+            skip: (currentPage - 1) * pageSize,
+            limit: pageSize,
+            search: document.getElementById('searchInput').value,
+            status: document.getElementById('statusFilter').value,
+            sort_by: document.getElementById('sortBy').value,
+            sort_order: document.getElementById('sortOrder').value
+        });
+        
+        const response = await authenticatedFetch(`/api/commission/?${params}`);
+        const data = await response.json();
+        
+        displayCommissions(data.items);
+        updatePagination(data.total, data.page, data.page_size, data.total_pages);
+    } catch (error) {
+        console.error('Erreur lors du chargement des commissions:', error);
+        showNotification('Erreur lors du chargement des données', 'danger');
+    }
+}
+
+async function loadStatistics() {
+    try {
+        const response = await authenticatedFetch('/api/commission/statistics/summary');
+        const stats = await response.json();
+        
+        document.getElementById('totalCount').textContent = stats.total || 0;
+        document.getElementById('toConstituteCount').textContent = stats.by_status?.a_constituer || 0;
+        document.getElementById('inProgressCount').textContent = stats.by_status?.seance_en_cours || 0;
+        document.getElementById('closedCount').textContent = stats.by_status?.commission_cloturee || 0;
+    } catch (error) {
+        console.error('Erreur lors du chargement des statistiques:', error);
+    }
+}
+
+function displayCommissions(commissions) {
+    const tbody = document.getElementById('commissionsTable');
+    tbody.innerHTML = '';
+    
+    if (!commissions || commissions.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Aucune commission</p>
+                    </div>
+                </td>
+            </tr>`;
+        return;
+    }
+    
+    const statusColors = {
+        'a_constituer': 'warning',
+        'constituee': 'info',
+        'seances_planifiees': 'primary',
+        'seance_en_cours': 'primary',
+        'seance_cloturee': 'success',
+        'commission_cloturee': 'success'
+    };
+    
+    const statusLabels = {
+        'a_constituer': 'À constituer',
+        'constituee': 'Constituée',
+        'seances_planifiees': 'Séances planifiées',
+        'seance_en_cours': 'Séance en cours',
+        'seance_cloturee': 'Séance clôturée',
+        'commission_cloturee': 'Commission clôturée'
+    };
+    
+    commissions.forEach(com => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${com.commission_number || '-'}</strong></td>
+            <td>${com.title.substring(0, 50)}${com.title.length > 50 ? '...' : ''}</td>
+            <td>${com.members.length} membre(s)</td>
+            <td>${com.sessions.length} séance(s)</td>
+            <td><span class="badge bg-${statusColors[com.status] || 'secondary'}">${statusLabels[com.status] || com.status}</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="viewCommission(${com.id})">
+                    <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteCommission(${com.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function updatePagination(total, page, pageSize, totalPages) {
+    document.getElementById('pageInfo').textContent = `Page ${page} sur ${totalPages}`;
+    
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    
+    if (totalPages > 1) {
+        if (page > 1) {
+            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${page - 1})">Précédent</a></li>`;
+        }
+        
+        for (let i = 1; i <= totalPages; i++) {
+            pagination.innerHTML += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" onclick="goToPage(${i})">${i}</a></li>`;
+        }
+        
+        if (page < totalPages) {
+            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${page + 1})">Suivant</a></li>`;
+        }
+    }
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    loadCommissions();
+}
+
+function viewCommission(id) {
+    window.location.href = `/commission/${id}`;
+}
+
+async function deleteCommission(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette commission ?')) return;
+    
+    try {
+        const response = await authenticatedFetch(`/api/commission/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            loadCommissions();
+            loadStatistics();
+            showNotification('Commission supprimée avec succès', 'success');
+        } else {
+            showNotification('Erreur lors de la suppression', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        showNotification('Erreur lors de la suppression', 'danger');
+    }
+}
+
+function refreshData() {
+    loadCommissions();
+    loadStatistics();
+}
+
+function exportData() {
+    showNotification('Export en cours de développement', 'info');
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,697 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard de Supervision - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard de Supervision</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="exportPDF()">
+            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="exportExcel()">
+            <i class="bi bi-file-earmark-excel"></i> Export Excel
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshData()">
+            <i class="bi bi-arrow-clockwise"></i> Actualiser
+        </button>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-2">
+                <select class="form-select" id="yearFilter">
+                    <option value="">Toutes les années</option>
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="serviceFilter">
+                    <option value="">Tous les services</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="procedureFilter">
+                    <option value="">Toutes les procédures</option>
+                    <option value="appel_offres">Appel d'offres</option>
+                    <option value="consultation">Consultation</option>
+                    <option value="marche_simplifie">Marché simplifié</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="typeFilter">
+                    <option value="">Tous les types</option>
+                    <option value="travaux">Travaux</option>
+                    <option value="fournitures">Fournitures</option>
+                    <option value="services">Services</option>
+                    <option value="etudes">Études</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tous les statuts</option>
+                    <option value="en_cours">En cours</option>
+                    <option value="validee">Validée</option>
+                    <option value="terminee">Terminée</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card border-primary clickable" onclick="navigateTo('planning')">
+            <div class="card-body">
+                <h6 class="text-muted small">Total Marchés</h6>
+                <h3 class="mb-0 text-primary" id="totalMarkets">0</h3>
+                <small class="text-muted">Toutes les planifications</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-success clickable" onclick="navigateTo('planning', 'en_cours')">
+            <div class="card-body">
+                <h6 class="text-muted small">Marchés Actifs</h6>
+                <h3 class="mb-0 text-success" id="activeMarkets">0</h3>
+                <small class="text-muted">En cours de traitement</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-info clickable" onclick="navigateTo('planning', 'terminee')">
+            <div class="card-body">
+                <h6 class="text-muted small">Marchés Terminés</h6>
+                <h3 class="mb-0 text-info" id="terminatedMarkets">0</h3>
+                <small class="text-muted">Procédure achevée</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-warning clickable" onclick="navigateTo('validation')">
+            <div class="card-body">
+                <h6 class="text-muted small">Validations en attente</h6>
+                <h3 class="mb-0 text-warning" id="validationsPending">0</h3>
+                <small class="text-muted">À traiter</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card border-danger clickable" onclick="navigateTo('planning', 'suspendue')">
+            <div class="card-body">
+                <h6 class="text-muted small">Marchés en retard</h6>
+                <h3 class="mb-0 text-danger" id="delayedMarkets">0</h3>
+                <small class="text-muted">Dépassant les délais</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-secondary clickable" onclick="navigateTo('planning')">
+            <div class="card-body">
+                <h6 class="text-muted small">Échéances proches</h6>
+                <h3 class="mb-0 text-secondary" id="upcomingDeadlines">0</h3>
+                <small class="text-muted">Dans les 7 jours</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-dark clickable" onclick="navigateTo('commission')">
+            <div class="card-body">
+                <h6 class="text-muted small">Alertes critiques</h6>
+                <h3 class="mb-0 text-dark" id="criticalAlerts">0</h3>
+                <small class="text-muted">Nécessitent attention</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-info clickable" onclick="navigateTo('publication')">
+            <div class="card-body">
+                <h6 class="text-muted small">Avis publiés</h6>
+                <h3 class="mb-0 text-info" id="publishedNotices">0</h3>
+                <small class="text-muted">Publications actives</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Rate -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Taux global d'avancement</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h1 class="display-4 text-primary" id="globalProgress">0%</h1>
+                        <p class="text-muted">Progression moyenne de tous les marchés</p>
+                    </div>
+                    <div class="ms-4">
+                        <canvas id="progressChart" width="100" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Indicateurs budgétaires</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-3">
+                        <h5 class="text-primary" id="budgetProgramme">0</h5>
+                        <small class="text-muted">Programmé</small>
+                    </div>
+                    <div class="col-3">
+                        <h5 class="text-warning" id="budgetEngage">0</h5>
+                        <small class="text-muted">Engagé</small>
+                    </div>
+                    <div class="col-3">
+                        <h5 class="text-success" id="budgetAttribue">0</h5>
+                        <small class="text-muted">Attribué</small>
+                    </div>
+                    <div class="col-3">
+                        <h5 class="text-info" id="budgetPaye">0</h5>
+                        <small class="text-muted">Payé</small>
+                    </div>
+                </div>
+                <canvas id="budgetChart" class="mt-3" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Répartition par statut</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Répartition par procédure</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="procedureChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Répartition par type de marché</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="typeChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Répartition par service</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="serviceChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Lists -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Top 10 Marchés à risque</h5>
+            </div>
+            <div class="card-body">
+                <div id="topRiskList">
+                    <p class="text-muted">Chargement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Top 10 Marchés en retard</h5>
+            </div>
+            <div class="card-body">
+                <div id="topDelayedList">
+                    <p class="text-muted">Chargement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Top 10 Échéances proches</h5>
+            </div>
+            <div class="card-body">
+                <div id="topUpcomingList">
+                    <p class="text-muted">Chargement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendar and Activities -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Calendrier des échéances (30 jours)</h5>
+            </div>
+            <div class="card-body">
+                <div id="calendarList" style="max-height: 400px; overflow-y: auto;">
+                    <p class="text-muted">Chargement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Activités récentes</h5>
+            </div>
+            <div class="card-body">
+                <div id="activitiesList" style="max-height: 400px; overflow-y: auto;">
+                    <p class="text-muted">Chargement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Commission Stats -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Statistiques des commissions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h4 class="text-primary" id="commissionsPlanifiees">0</h4>
+                        <small class="text-muted">Planifiées</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-warning" id="commissionsEnCours">0</h4>
+                        <small class="text-muted">En cours</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-success" id="commissionsCloturees">0</h4>
+                        <small class="text-muted">Clôturées</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-danger" id="sessionsReportees">0</h4>
+                        <small class="text-muted">Séances reportées</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let charts = {};
+
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    loadServices();
+});
+
+async function loadServices() {
+    try {
+        const response = await authenticatedFetch('/api/users/');
+        const data = await response.json();
+        const serviceFilter = document.getElementById('serviceFilter');
+        data.items.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.full_name;
+            serviceFilter.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des services:', error);
+    }
+}
+
+async function loadDashboardData() {
+    try {
+        const filters = getFilters();
+        const params = new URLSearchParams(filters);
+        
+        const response = await authenticatedFetch(`/api/supervision/kpis?${params}`);
+        const kpis = await response.json();
+        
+        updateKPICards(kpis);
+        updateCharts(kpis);
+        updateTopLists(kpis);
+        updateCalendar(kpis);
+        updateActivities(kpis);
+    } catch (error) {
+        console.error('Erreur lors du chargement des KPI:', error);
+        showNotification('Erreur lors du chargement des données', 'danger');
+    }
+}
+
+function getFilters() {
+    return {
+        year: document.getElementById('yearFilter').value,
+        service_id: document.getElementById('serviceFilter').value,
+        procedure_type: document.getElementById('procedureFilter').value,
+        project_type: document.getElementById('typeFilter').value,
+        status: document.getElementById('statusFilter').value
+    };
+}
+
+function updateKPICards(kpis) {
+    document.getElementById('totalMarkets').textContent = kpis.total_markets;
+    document.getElementById('activeMarkets').textContent = kpis.markets_by_state.actifs;
+    document.getElementById('terminatedMarkets').textContent = kpis.markets_by_state.termines;
+    document.getElementById('validationsPending').textContent = kpis.validations_pending;
+    document.getElementById('delayedMarkets').textContent = kpis.delayed_markets;
+    document.getElementById('upcomingDeadlines').textContent = kpis.upcoming_deadlines;
+    document.getElementById('criticalAlerts').textContent = kpis.critical_alerts;
+    document.getElementById('publishedNotices').textContent = kpis.published_notices;
+    document.getElementById('globalProgress').textContent = kpis.global_progress_rate + '%';
+    
+    // Budget
+    document.getElementById('budgetProgramme').textContent = formatCurrency(kpis.budget_indicators.programme);
+    document.getElementById('budgetEngage').textContent = formatCurrency(kpis.budget_indicators.engage);
+    document.getElementById('budgetAttribue').textContent = formatCurrency(kpis.budget_indicators.attribue);
+    document.getElementById('budgetPaye').textContent = formatCurrency(kpis.budget_indicators.paye);
+    
+    // Commissions
+    document.getElementById('commissionsPlanifiees').textContent = kpis.commissions_stats.planifiees;
+    document.getElementById('commissionsEnCours').textContent = kpis.commissions_stats.en_cours;
+    document.getElementById('commissionsCloturees').textContent = kpis.commissions_stats.cloturees;
+    document.getElementById('sessionsReportees').textContent = kpis.postponed_sessions;
+}
+
+function updateCharts(kpis) {
+    // Progress Chart (Doughnut)
+    if (charts.progress) charts.progress.destroy();
+    const progressCtx = document.getElementById('progressChart').getContext('2d');
+    charts.progress = new Chart(progressCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Complété', 'Restant'],
+            datasets: [{
+                data: [kpis.global_progress_rate, 100 - kpis.global_progress_rate],
+                backgroundColor: ['#0d6efd', '#e9ecef']
+            }]
+        },
+        options: {
+            cutout: '70%',
+            plugins: { legend: { display: false } }
+        }
+    });
+    
+    // Budget Chart (Bar)
+    if (charts.budget) charts.budget.destroy();
+    const budgetCtx = document.getElementById('budgetChart').getContext('2d');
+    charts.budget = new Chart(budgetCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Programmé', 'Engagé', 'Attribué', 'Payé'],
+            datasets: [{
+                data: [
+                    kpis.budget_indicators.programme,
+                    kpis.budget_indicators.engage,
+                    kpis.budget_indicators.attribue,
+                    kpis.budget_indicators.paye
+                ],
+                backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#0dcaf0']
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+    
+    // Status Chart (Pie)
+    if (charts.status) charts.status.destroy();
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    charts.status = new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(kpis.markets_by_status),
+            datasets: [{
+                data: Object.values(kpis.markets_by_status),
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0']
+            }]
+        }
+    });
+    
+    // Procedure Chart (Doughnut)
+    if (charts.procedure) charts.procedure.destroy();
+    const procedureCtx = document.getElementById('procedureChart').getContext('2d');
+    charts.procedure = new Chart(procedureCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(kpis.by_procedure),
+            datasets: [{
+                data: Object.values(kpis.by_procedure),
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d']
+            }]
+        }
+    });
+    
+    // Type Chart (Bar)
+    if (charts.type) charts.type.destroy();
+    const typeCtx = document.getElementById('typeChart').getContext('2d');
+    charts.type = new Chart(typeCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(kpis.by_market_type),
+            datasets: [{
+                data: Object.values(kpis.by_market_type),
+                backgroundColor: '#0d6efd'
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+    
+    // Service Chart (Horizontal Bar)
+    if (charts.service) charts.service.destroy();
+    const serviceCtx = document.getElementById('serviceChart').getContext('2d');
+    charts.service = new Chart(serviceCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(kpis.by_service),
+            datasets: [{
+                data: Object.values(kpis.by_service),
+                backgroundColor: '#198754'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true } }
+        }
+    });
+}
+
+function updateTopLists(kpis) {
+    // Top Risk
+    const riskList = document.getElementById('topRiskList');
+    riskList.innerHTML = kpis.top_risk_markets.map(m => `
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+            <div>
+                <strong>${m.reference}</strong>
+                <br><small class="text-muted">${m.title}</small>
+            </div>
+            <div class="text-end">
+                <span class="badge bg-danger">${m.risk_score}% risque</span>
+                <br><small class="text-muted">${m.progress}% avancement</small>
+            </div>
+        </div>
+    `).join('') || '<p class="text-muted">Aucun marché à risque</p>';
+    
+    // Top Delayed
+    const delayedList = document.getElementById('topDelayedList');
+    delayedList.innerHTML = kpis.top_delayed_markets.map(m => `
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+            <div>
+                <strong>${m.reference}</strong>
+                <br><small class="text-muted">${m.title}</small>
+            </div>
+            <div class="text-end">
+                <span class="badge bg-danger">${m.delay_days} jours</span>
+                <br><small class="text-muted">de retard</small>
+            </div>
+        </div>
+    `).join('') || '<p class="text-muted">Aucun marché en retard</p>';
+    
+    // Top Upcoming
+    const upcomingList = document.getElementById('topUpcomingList');
+    upcomingList.innerHTML = kpis.top_upcoming_deadlines.map(m => `
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+            <div>
+                <strong>${m.reference}</strong>
+                <br><small class="text-muted">${m.title}</small>
+            </div>
+            <div class="text-end">
+                <span class="badge bg-warning">${m.days_until} jours</span>
+                <br><small class="text-muted">restants</small>
+            </div>
+        </div>
+    `).join('') || '<p class="text-muted">Aucune échéance proche</p>';
+}
+
+function updateCalendar(kpis) {
+    const calendarList = document.getElementById('calendarList');
+    calendarList.innerHTML = kpis.upcoming_calendar.map(event => `
+        <div class="d-flex align-items-center mb-2 p-2 border rounded">
+            <div class="me-3">
+                <div class="text-center">
+                    <strong>${new Date(event.date).getDate()}</strong>
+                    <br><small class="text-muted">${new Date(event.date).toLocaleDateString('fr-FR', { month: 'short' })}</small>
+                </div>
+            </div>
+            <div>
+                <strong>${event.title}</strong>
+                <br><small class="text-muted">${event.type}</small>
+            </div>
+        </div>
+    `).join('') || '<p class="text-muted">Aucune échéance à venir</p>';
+}
+
+function updateActivities(kpis) {
+    const activitiesList = document.getElementById('activitiesList');
+    activitiesList.innerHTML = kpis.recent_activities.map(activity => `
+        <div class="d-flex align-items-center mb-2 p-2 border rounded">
+            <div class="me-3">
+                <span class="badge bg-${activity.type === 'validation' ? 'primary' : activity.type === 'commission' ? 'success' : 'info'}">
+                    ${activity.type}
+                </span>
+            </div>
+            <div>
+                <strong>${activity.action}</strong>
+                <br><small class="text-muted">${activity.description || ''}</small>
+                <br><small class="text-muted">Par ${activity.user} - ${formatDate(activity.date)}</small>
+            </div>
+        </div>
+    `).join('') || '<p class="text-muted">Aucune activité récente</p>';
+}
+
+function applyFilters() {
+    loadDashboardData();
+}
+
+function refreshData() {
+    loadDashboardData();
+    showNotification('Données actualisées', 'success');
+}
+
+function navigateTo(module, status = null) {
+    let url = '/' + module;
+    if (status) {
+        url += '?status=' + status;
+    }
+    window.location.href = url;
+}
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(value);
+}
+
+function formatDate(date) {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR');
+}
+
+function exportPDF() {
+    showNotification('Export PDF en cours de développement', 'info');
+}
+
+function exportExcel() {
+    showNotification('Export Excel en cours de développement', 'info');
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
+// Clickable cards
+document.querySelectorAll('.clickable').forEach(card => {
+    card.style.cursor = 'pointer';
+    card.addEventListener('mouseenter', function() {
+        this.classList.add('shadow');
+    });
+    card.addEventListener('mouseleave', function() {
+        this.classList.remove('shadow');
+    });
+});
+</script>
+{% endblock %}

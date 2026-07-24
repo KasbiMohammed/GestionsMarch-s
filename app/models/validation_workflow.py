@@ -77,6 +77,7 @@ class ValidationWorkflow(Base):
     checklist = relationship("ValidationChecklist", back_populates="workflow", uselist=False, cascade="all, delete-orphan")
     history = relationship("ValidationHistory", back_populates="workflow", cascade="all, delete-orphan")
     alerts = relationship("ValidationAlert", back_populates="workflow", cascade="all, delete-orphan")
+    commission = relationship("Commission", back_populates="workflow", uselist=False, cascade="all, delete-orphan")
 
 
 class ValidationRecord(Base):

@@ -15,14 +15,24 @@ from app.models.annual_planning import (
     PlanningStatus, NeedPriority
 )
 from app.models.market_preparation import (
-    MarketPreparation, CPS, BPU, DQE, TechnicalPlan, PreparationStatus
+    MarketPreparation,
+    PreparationDocument,
+    PreparationHistory,
+    PreparationAlert,
+    PreparationStatus
 )
 from app.models.procurement_rules import (
     ProcurementRule, ProcurementDecision, ProcurementMethod, MarketNature
 )
 from app.models.commission import (
-    Commission, CommissionMember, CommissionConvocation,
-    CommissionType, CommissionStatus
+    Commission,
+    CommissionMember,
+    CommissionSession,
+    CommissionAlert,
+    CommissionHistory,
+    CommissionStatus,
+    SessionStatus,
+    MemberRole
 )
 from app.models.offer_management import (
     PMMPPublication, Offer, OfferDocument,

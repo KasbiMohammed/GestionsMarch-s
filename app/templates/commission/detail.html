@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+
+{% block title %}Détail Commission - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Détail de la Commission</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/commission" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+        <button type="button" class="btn btn-sm btn-success me-2" id="createPublicationBtn" onclick="createPublication()" style="display: none;">
+            <i class="bi bi-megaphone"></i> Créer publication
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCommission()">
+            <i class="bi bi-trash"></i> Supprimer
+        </button>
+    </div>
+</div>
+
+<div id="commissionDetail">
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Chargement...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let commissionId = window.location.pathname.split('/').pop();
+
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCommissionDetail();
+});
+
+async function loadCommissionDetail() {
+    try {
+        const response = await authenticatedFetch(`/api/commission/${commissionId}`);
+        const com = await response.json();
+        
+        // Check if publications exist
+        const publicationsResponse = await authenticatedFetch(`/api/publication/commission/${commissionId}`);
+        const publications = publicationsResponse.ok ? await publicationsResponse.json() : [];
+        
+        // Show/hide create publication button
+        const createBtn = document.getElementById('createPublicationBtn');
+        if (createBtn) {
+            // Only show if commission is closed and no publications exist
+            createBtn.style.display = (com.status === 'commission_cloturee' && publications.length === 0) ? 'inline-block' : 'none';
+        }
+        
+        displayCommissionDetail(com);
+    } catch (error) {
+        console.error('Erreur lors du chargement:', error);
+        document.getElementById('commissionDetail').innerHTML = `
+            <div class="alert alert-danger">
+                Erreur lors du chargement de la commission
+            </div>`;
+    }
+}
+
+function displayCommissionDetail(com) {
+    const statusColors = {
+        'a_constituer': 'warning',
+        'constituee': 'info',
+        'seances_planifiees': 'primary',
+        'seance_en_cours': 'primary',
+        'seance_cloturee': 'success',
+        'commission_cloturee': 'success'
+    };
+    
+    const statusLabels = {
+        'a_constituer': 'À constituer',
+        'constituee': 'Constituée',
+        'seances_planifiees': 'Séances planifiées',
+        'seance_en_cours': 'Séance en cours',
+        'seance_cloturee': 'Séance clôturée',
+        'commission_cloturee': 'Commission clôturée'
+    };
+    
+    document.getElementById('commissionDetail').innerHTML = `
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Informations générales</h5>
+                        <span class="badge bg-${statusColors[com.status] || 'secondary'}">${statusLabels[com.status] || com.status}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="text-muted small">Numéro de commission</label>
+                                <p><strong>${com.commission_number || '-'}</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Workflow ID</label>
+                                <p><a href="/validation/${com.workflow_id}">${com.workflow_id}</a></p>
+                            </div>
+                            <div class="col-12">
+                                <label class="text-muted small">Titre</label>
+                                <p><strong>${com.title}</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Date de constitution</label>
+                                <p>${com.constituted_at ? formatDate(com.constituted_at) : '-'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Date de clôture</label>
+                                <p>${com.closed_at ? formatDate(com.closed_at) : '-'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Résumé</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="text-muted small">Membres</label>
+                            <h4>${com.members.length}</h4>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small">Séances</label>
+                            <h4>${com.sessions.length}</h4>
+                        </div>
+                        <div>
+                            <label class="text-muted small">Alertes</label>
+                            <h4>${com.alerts.length}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Membres de la commission</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="showAddMemberModal()">
+                            <i class="bi bi-plus"></i> Ajouter un membre
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        ${com.members.length === 0 ? 
+                            '<p class="text-muted">Aucun membre</p>' : 
+                            com.members.map(member => `
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                                    <div>
+                                        <strong>${member.user_name || 'N/A'}</strong>
+                                        <br>
+                                        <small class="text-muted">${member.role} ${member.is_president ? '(Président)' : ''} ${member.is_secretary ? '(Secrétaire)' : ''}</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="removeMember(${member.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Séances</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="showAddSessionModal()">
+                            <i class="bi bi-plus"></i> Ajouter une séance
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        ${com.sessions.length === 0 ? 
+                            '<p class="text-muted">Aucune séance</p>' : 
+                            com.sessions.map(session => displaySession(session)).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Alertes</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="alertsList">
+                            ${com.alerts.length === 0 ? 
+                                '<p class="text-muted">Aucune alerte</p>' : 
+                                com.alerts.map(alert => `
+                                    <div class="alert alert-${alert.severity === 'high' ? 'danger' : alert.severity === 'medium' ? 'warning' : 'info'} d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>${alert.title}</strong>
+                                            <p class="mb-0 small">${alert.message}</p>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="resolveAlert(${alert.id})">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Observations</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>${com.observations || 'Aucune observation'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Historique</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                        <th>Utilisateur</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${com.history.length === 0 ? 
+                                        '<tr><td colspan="4" class="text-center">Aucun historique</td></tr>' : 
+                                        com.history.map(h => `
+                                            <tr>
+                                                <td>${formatDate(h.created_at)}</td>
+                                                <td>${h.action}</td>
+                                                <td>${h.user_name || '-'}</td>
+                                                <td>${h.description || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function displaySession(session) {
+    const statusColors = {
+        'planifiee': 'primary',
+        'reportee': 'warning',
+        'en_cours': 'info',
+        'suspendue': 'warning',
+        'cloturee': 'success',
+        'annulee': 'danger'
+    };
+    
+    const statusLabels = {
+        'planifiee': 'Planifiée',
+        'reportee': 'Reportée',
+        'en_cours': 'En cours',
+        'suspendue': 'Suspendue',
+        'cloturee': 'Clôturée',
+        'annulee': 'Annulée'
+    };
+    
+    return `
+        <div class="card mb-3 border-${statusColors[session.status] || 'secondary'}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="card-title">Séance ${session.session_number}: ${session.session_title}</h6>
+                    <span class="badge bg-${statusColors[session.status] || 'secondary'}">${statusLabels[session.status] || session.status}</span>
+                </div>
+                <p class="mb-1 small text-muted">Date: ${formatDate(session.planned_date)} ${session.planned_time ? 'à ' + session.planned_time : ''}</p>
+                ${session.location ? `<p class="mb-1 small"><strong>Lieu:</strong> ${session.location}</p>` : ''}
+                ${session.session_type ? `<p class="mb-1 small"><strong>Type:</strong> ${session.session_type}</p>` : ''}
+                ${session.agenda ? `<p class="mb-1 small"><strong>Ordre du jour:</strong> ${session.agenda.substring(0, 100)}${session.agenda.length > 100 ? '...' : ''}</p>` : ''}
+                ${session.pv_generated ? '<span class="badge bg-success">PV généré</span>' : ''}
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="viewSession(${session.id})">
+                        <i class="bi bi-eye"></i> Détails
+                    </button>
+                    ${session.status !== 'cloturee' ? `
+                        <button class="btn btn-sm btn-outline-success me-1" onclick="updateSessionStatus(${session.id}, 'cloturee')">
+                            <i class="bi bi-check"></i> Clôturer
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function formatDate(date) {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR');
+}
+
+function deleteCommission() {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette commission ?')) {
+        authenticatedFetch(`/api/commission/${commissionId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                showNotification('Commission supprimée', 'success');
+                window.location.href = '/commission';
+            } else {
+                showNotification('Erreur lors de la suppression', 'danger');
+            }
+        });
+    }
+}
+
+function showAddMemberModal() {
+    showNotification('Fonctionnalité d\'ajout de membre en cours de développement', 'info');
+}
+
+function showAddSessionModal() {
+    showNotification('Fonctionnalité d\'ajout de séance en cours de développement', 'info');
+}
+
+function removeMember(memberId) {
+    if (confirm('Supprimer ce membre ?')) {
+        authenticatedFetch(`/api/commission/members/${memberId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                showNotification('Membre supprimé', 'success');
+                loadCommissionDetail();
+            } else {
+                showNotification('Erreur lors de la suppression', 'danger');
+            }
+        });
+    }
+}
+
+function viewSession(sessionId) {
+    showNotification('Détail de séance en cours de développement', 'info');
+}
+
+function updateSessionStatus(sessionId, status) {
+    authenticatedFetch(`/api/commission/sessions/${sessionId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: status })
+    }).then(response => {
+        if (response.ok) {
+            showNotification('Statut mis à jour', 'success');
+            loadCommissionDetail();
+        } else {
+            showNotification('Erreur lors de la mise à jour', 'danger');
+        }
+    });
+}
+
+function resolveAlert(alertId) {
+    authenticatedFetch(`/api/commission/alerts/${alertId}/resolve`, {
+        method: 'POST'
+    }).then(response => {
+        if (response.ok) {
+            showNotification('Alerte résolue', 'success');
+            loadCommissionDetail();
+        } else {
+            showNotification('Erreur lors de la résolution', 'danger');
+        }
+    });
+}
+
+async function createPublication() {
+    try {
+        const response = await authenticatedFetch('/api/publication/', {
+            method: 'POST',
+            body: JSON.stringify({
+                commission_id: commissionId,
+                object: 'Publication pour commission ' + commissionId,
+                procedure_type: 'appel_offres',
+                submission_deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                bid_opening_date: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            })
+        });
+        
+        if (response.ok) {
+            const publication = await response.json();
+            showNotification('Publication créée', 'success');
+            setTimeout(() => {
+                window.location.href = `/publication/${publication.id}`;
+            }, 1500);
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de la création de la publication', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la création de la publication:', error);
+        showNotification('Erreur lors de la création de la publication', 'danger');
+    }
+}
+</script>
+{% endblock %}

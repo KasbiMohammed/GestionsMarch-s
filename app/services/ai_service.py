@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 import re
 
-from app.models.market_preparation import MarketPreparation, CPS
+from app.models.market_preparation import MarketPreparation
 from app.models.market import Market
 from app.models.stage import Stage
 
@@ -30,133 +30,145 @@ class AIService:
         Returns:
             Dictionnaire avec l'analyse du CPS
         """
-        cps = self.db.query(CPS).filter(
-            CPS.id == cps_id
-        ).first()
-        
-        if not cps:
-            raise ValueError("CPS non trouvé")
-        
-        analysis = {
-            'completeness': self._check_cps_completeness(cps),
-            'missing_sections': self._detect_missing_sections(cps),
-            'inconsistencies': self._detect_inconsistencies(cps),
-            'suggestions': self._generate_cps_suggestions(cps),
-            'risk_assessment': self._assess_cps_risks(cps),
-            'analyzed_at': datetime.utcnow().isoformat()
-        }
-        
-        return analysis
+        # CPS model not implemented yet
+        return {'id': cps_id, 'message': 'CPS model not implemented', 'analyzed_at': datetime.utcnow().isoformat()}
+        # cps = self.db.query(CPS).filter(
+        #     CPS.id == cps_id
+        # ).first()
+        # 
+        # if not cps:
+        #     raise ValueError("CPS non trouvé")
+        # 
+        # analysis = {
+        #     'completeness': self._check_cps_completeness(cps),
+        #     'missing_sections': self._detect_missing_sections(cps),
+        #     'inconsistencies': self._detect_inconsistencies(cps),
+        #     'suggestions': self._generate_cps_suggestions(cps),
+        #     'risk_assessment': self._assess_cps_risks(cps),
+        #     'analyzed_at': datetime.utcnow().isoformat()
+        # }
+        # 
+        # return analysis
     
-    def _check_cps_completeness(self, cps: CPS) -> Dict:
+    def _check_cps_completeness(self, cps) -> Dict:
         """Vérifie la complétude du CPS"""
-        required_sections = {
-            'general_conditions': cps.general_conditions,
-            'special_conditions': cps.special_conditions,
-            'technical_specifications': cps.technical_specifications,
-            'administrative_clauses': cps.administrative_clauses,
-            'financial_clauses': cps.financial_clauses,
-            'legal_clauses': cps.legal_clauses
-        }
-        
-        completed = sum(1 for section in required_sections.values() if section)
-        total = len(required_sections)
-        
-        return {
-            'percentage': (completed / total * 100) if total > 0 else 0,
-            'completed_sections': completed,
-            'total_sections': total,
-            'section_status': {
-                section: bool(content)
-                for section, content in required_sections.items()
-            }
-        }
+        # CPS model not implemented yet
+        return {'percentage': 0, 'completed_sections': 0, 'total_sections': 0, 'section_status': {}}
+        # required_sections = {
+        #     'general_conditions': cps.general_conditions,
+        #     'special_conditions': cps.special_conditions,
+        #     'technical_specifications': cps.technical_specifications,
+        #     'administrative_clauses': cps.administrative_clauses,
+        #     'financial_clauses': cps.financial_clauses,
+        #     'legal_clauses': cps.legal_clauses
+        # }
+        # 
+        # completed = sum(1 for section in required_sections.values() if section)
+        # total = len(required_sections)
+        # 
+        # return {
+        #     'percentage': (completed / total * 100) if total > 0 else 0,
+        #     'completed_sections': completed,
+        #     'total_sections': total,
+        #     'section_status': {
+        #         section: bool(content)
+        #         for section, content in required_sections.items()
+        #     }
+        # }
     
-    def _detect_missing_sections(self, cps: CPS) -> List[str]:
+    def _detect_missing_sections(self, cps) -> List[str]:
         """Détecte les sections manquantes du CPS"""
-        missing = []
-        
-        if not cps.general_conditions:
-            missing.append("Conditions générales")
-        if not cps.special_conditions:
-            missing.append("Conditions spéciales")
-        if not cps.technical_specifications:
-            missing.append("Spécifications techniques")
-        if not cps.administrative_clauses:
-            missing.append("Clauses administratives")
-        if not cps.financial_clauses:
-            missing.append("Clauses financières")
-        if not cps.legal_clauses:
-            missing.append("Clauses juridiques")
-        
-        return missing
+        # CPS model not implemented yet
+        return []
+        # missing = []
+        # 
+        # if not cps.general_conditions:
+        #     missing.append("Conditions générales")
+        # if not cps.special_conditions:
+        #     missing.append("Conditions spéciales")
+        # if not cps.technical_specifications:
+        #     missing.append("Spécifications techniques")
+        # if not cps.administrative_clauses:
+        #     missing.append("Clauses administratives")
+        # if not cps.financial_clauses:
+        #     missing.append("Clauses financières")
+        # if not cps.legal_clauses:
+        #     missing.append("Clauses juridiques")
+        # 
+        # return missing
     
-    def _detect_inconsistencies(self, cps: CPS) -> List[Dict]:
+    def _detect_inconsistencies(self, cps) -> List[Dict]:
         """Détecte les incohérences dans le CPS"""
-        inconsistencies = []
-        
-        # Vérifier les incohérences de montants
-        if cps.technical_specifications and cps.financial_clauses:
-            # Recherche de montants dans les spécifications techniques
-            tech_amounts = re.findall(r'(\d+(?:,\d+)*)\s*(?:MAD|DH|Dirham)', cps.technical_specifications)
-            fin_amounts = re.findall(r'(\d+(?:,\d+)*)\s*(?:MAD|DH|Dirham)', cps.financial_clauses)
-            
-            if tech_amounts and fin_amounts:
-                # Comparaison simplifiée
-                inconsistencies.append({
-                    'type': 'montant',
-                    'description': 'Vérifier la cohérence des montants entre spécifications techniques et clauses financières',
-                    'severity': 'medium'
-                })
-        
-        # Vérifier les incohérences de délais
-        if cps.administrative_clauses:
-            deadlines = re.findall(r'(\d+)\s*(?:jours|semaines|mois)', cps.administrative_clauses)
-            if len(set(deadlines)) > 3:
-                inconsistencies.append({
-                    'type': 'délai',
-                    'description': 'Multiples délais différents détectés, vérifier la cohérence',
-                    'severity': 'low'
-                })
-        
-        return inconsistencies
+        # CPS model not implemented yet
+        return []
+        # inconsistencies = []
+        # 
+        # # Vérifier les incohérences de montants
+        # if cps.technical_specifications and cps.financial_clauses:
+        #     # Recherche de montants dans les spécifications techniques
+        #     tech_amounts = re.findall(r'(\d+(?:,\d+)*)\s*(?:MAD|DH|Dirham)', cps.technical_specifications)
+        #     fin_amounts = re.findall(r'(\d+(?:,\d+)*)\s*(?:MAD|DH|Dirham)', cps.financial_clauses)
+        #     
+        #     if tech_amounts and fin_amounts:
+        #         # Comparaison simplifiée
+        #         inconsistencies.append({
+        #             'type': 'montant',
+        #             'description': 'Vérifier la cohérence des montants entre spécifications techniques et clauses financières',
+        #             'severity': 'medium'
+        #         })
+        # 
+        # # Vérifier les incohérences de délais
+        # if cps.administrative_clauses:
+        #     deadlines = re.findall(r'(\d+)\s*(?:jours|semaines|mois)', cps.administrative_clauses)
+        #     if len(set(deadlines)) > 3:
+        #         inconsistencies.append({
+        #             'type': 'délai',
+        #             'description': 'Multiples délais différents détectés, vérifier la cohérence',
+        #             'severity': 'low'
+        #         })
+        # 
+        # return inconsistencies
     
-    def _generate_cps_suggestions(self, cps: CPS) -> List[str]:
+    def _generate_cps_suggestions(self, cps) -> List[str]:
         """Génère des suggestions d'amélioration pour le CPS"""
-        suggestions = []
-        
-        if not cps.regulatory_references:
-            suggestions.append("Ajouter les références réglementaires (décret, articles)")
-        
-        if not cps.special_conditions:
-            suggestions.append("Compléter les conditions spéciales du marché")
-        
-        if cps.technical_specifications and len(cps.technical_specifications) < 500:
-            suggestions.append("Les spécifications techniques semblent trop brèves, les détailler davantage")
-        
-        return suggestions
+        # CPS model not implemented yet
+        return []
+        # suggestions = []
+        # 
+        # if not cps.regulatory_references:
+        #     suggestions.append("Ajouter les références réglementaires (décret, articles)")
+        # 
+        # if not cps.special_conditions:
+        #     suggestions.append("Compléter les conditions spéciales du marché")
+        # 
+        # if cps.technical_specifications and len(cps.technical_specifications) < 500:
+        #     suggestions.append("Les spécifications techniques semblent trop brèves, les détailler davantage")
+        # 
+        # return suggestions
     
-    def _assess_cps_risks(self, cps: CPS) -> Dict:
+    def _assess_cps_risks(self, cps) -> Dict:
         """Évalue les risques liés au CPS"""
-        risks = {
-            'high_risks': [],
-            'medium_risks': [],
-            'low_risks': []
-        }
-        
-        completeness = self._check_cps_completeness(cps)
-        
-        if completeness['percentage'] < 50:
-            risks['high_risks'].append("CPS incomplet - risque de contentieux")
-        elif completeness['percentage'] < 80:
-            risks['medium_risks'].append("CPS partiellement complet")
-        
-        inconsistencies = self._detect_inconsistencies(cps)
-        high_severity = [i for i in inconsistencies if i['severity'] == 'high']
-        if high_severity:
-            risks['high_risks'].extend([i['description'] for i in high_severity])
-        
-        return risks
+        # CPS model not implemented yet
+        return {'high_risks': [], 'medium_risks': [], 'low_risks': []}
+        # risks = {
+        #     'high_risks': [],
+        #     'medium_risks': [],
+        #     'low_risks': []
+        # }
+        # 
+        # completeness = self._check_cps_completeness(cps)
+        # 
+        # if completeness['percentage'] < 50:
+        #     risks['high_risks'].append("CPS incomplet - risque de contentieux")
+        # elif completeness['percentage'] < 80:
+        #     risks['medium_risks'].append("CPS partiellement complet")
+        # 
+        # inconsistencies = self._detect_inconsistencies(cps)
+        # high_severity = [i for i in inconsistencies if i['severity'] == 'high']
+        # if high_severity:
+        #     risks['high_risks'].extend([i['description'] for i in high_severity])
+        # 
+        # return risks
     
     def check_missing_documents(self, market_id: int) -> Dict:
         """
@@ -185,12 +197,13 @@ class AIService:
         
         # Vérifier la préparation
         if market.preparation:
-            if market.preparation.cps:
-                required_documents['CPS'] = True
-            if market.preparation.bpu:
-                required_documents['BPU'] = True
-            if market.preparation.dqe:
-                required_documents['DQE'] = True
+            # if market.preparation.cps:
+            #     required_documents['CPS'] = True
+            # if market.preparation.bpu:
+            #     required_documents['BPU'] = True
+            # if market.preparation.dqe:
+            #     required_documents['DQE'] = True
+            pass  # Models not implemented yet
         
         # Vérifier les documents
         from app.models.document import Document
@@ -490,7 +503,7 @@ Date de création: {market.created_at.strftime('%d/%m/%Y') if market.created_at 
             Dictionnaire du rapport IA complet
         """
         return {
-            'cps_analysis': self.analyze_cps(market_id) if self._has_cps(market_id) else None,
+            'cps_analysis': None,  # CPS model not implemented
             'missing_documents': self.check_missing_documents(market_id),
             'market_summary': self.generate_market_summary(market_id),
             'similar_markets': self.find_similar_markets(market_id),
@@ -501,12 +514,14 @@ Date de création: {market.created_at.strftime('%d/%m/%Y') if market.created_at 
     
     def _has_cps(self, market_id: int) -> bool:
         """Vérifie si le marché a un CPS"""
-        from app.models.market_preparation import MarketPreparation
-        preparation = self.db.query(MarketPreparation).filter(
-            MarketPreparation.market_id == market_id
-        ).first()
-        
-        return preparation and preparation.cps is not None
+        # CPS model not implemented yet
+        return False
+        # from app.models.market_preparation import MarketPreparation
+        # preparation = self.db.query(MarketPreparation).filter(
+        #     MarketPreparation.market_id == market_id
+        # ).first()
+        # 
+        # return preparation and preparation.cps is not None
 
 
 def get_ai_service(db: Session) -> AIService:

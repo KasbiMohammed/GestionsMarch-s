@@ -1,348 +1,717 @@
 """
-Service de gestion des commissions
-Module 4: Gestion des commissions
+Service métier pour la gestion des commissions
+Module 4: Constitution et gestion de la commission
+Relation: 1 workflow de validation → 1 commission
+Une commission peut avoir plusieurs séances indépendantes
 """
 
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional, Tuple
+
+from sqlalchemy import asc, desc, or_
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, func
 
 from app.models.commission import (
-    Commission, CommissionMember, CommissionConvocation,
-    CommissionType, CommissionStatus
+    Commission,
+    CommissionMember,
+    CommissionSession,
+    CommissionAlert,
+    CommissionHistory,
+    CommissionStatus,
+    SessionStatus,
+    MemberRole,
 )
+from app.models.validation_workflow import ValidationWorkflow, WorkflowStatus
 from app.models.user import User
-from app.models.history import History
 
 
 class CommissionService:
-    """Service pour la gestion des commissions"""
-    
+    """Service de gestion des commissions"""
+
+    SORTABLE_FIELDS = {
+        "commission_number": Commission.commission_number,
+        "title": Commission.title,
+        "status": Commission.status,
+        "constituted_at": Commission.constituted_at,
+        "created_at": Commission.created_at,
+    }
+
     def __init__(self, db: Session):
         self.db = db
-    
-    def create_commission(self, commission_data: dict, user_id: int) -> Commission:
-        """
-        Crée une nouvelle commission
+
+    def generate_commission_number(self) -> str:
+        """Génère un numéro de commission unique."""
+        count = self.db.query(Commission).count()
+        return f"COM-{datetime.now().year}-{count + 1:04d}"
+
+    def create_commission(
+        self,
+        workflow_id: int,
+        data: Dict,
+        user_id: int,
+    ) -> Commission:
+        """Crée une nouvelle commission à partir d'un workflow validé."""
+        # Vérifier que le workflow existe et est validé
+        workflow = self.db.query(ValidationWorkflow).filter(
+            ValidationWorkflow.id == workflow_id
+        ).first()
         
-        Args:
-            commission_data: Données de la commission
-            user_id: ID de l'utilisateur créateur
-            
-        Returns:
-            Instance de Commission créée
-        """
-        # Générer une référence
-        reference = self._generate_reference(commission_data['commission_type'])
+        if not workflow:
+            raise ValueError("Workflow non trouvé")
         
+        if workflow.status != WorkflowStatus.VALIDATED:
+            raise ValueError("Le workflow doit être validé pour créer une commission")
+        
+        # Vérifier qu'une commission n'existe pas déjà
+        existing = self.db.query(Commission).filter(
+            Commission.workflow_id == workflow_id
+        ).first()
+        
+        if existing:
+            raise ValueError("Une commission existe déjà pour ce workflow")
+        
+        # Créer la commission
         commission = Commission(
-            market_id=commission_data['market_id'],
-            commission_type=commission_data['commission_type'],
-            reference=reference,
-            title=commission_data['title'],
-            description=commission_data.get('description'),
-            planned_date=commission_data['planned_date'],
-            planned_time=commission_data.get('planned_time'),
-            location=commission_data.get('location'),
-            status=CommissionStatus.PLANNED,
-            required_members=commission_data.get('required_members', 3),
+            workflow_id=workflow_id,
+            commission_number=data.get("commission_number") or self.generate_commission_number(),
+            title=data.get("title"),
+            description=data.get("description"),
+            status=CommissionStatus.TO_BE_CONSTITUTED,
+            observations=data.get("observations"),
             created_by=user_id,
-            created_at=datetime.utcnow()
         )
         
         self.db.add(commission)
         self.db.commit()
         self.db.refresh(commission)
         
-        return commission
-    
-    def add_member(self, commission_id: int, member_data: dict) -> CommissionMember:
-        """
-        Ajoute un membre à une commission
+        # Ajouter les membres si fournis
+        members_data = data.get("members", [])
+        for member_data in members_data:
+            self.add_member(commission.id, member_data, user_id)
         
-        Args:
-            commission_id: ID de la commission
-            member_data: Données du membre
-            
-        Returns:
-            Instance de CommissionMember créée
-        """
+        # Ajouter l'historique
+        self.add_history(
+            commission.id,
+            "Création",
+            f"Création de la commission pour le workflow {workflow_id}",
+            user_id,
+        )
+        
+        # Générer les alertes initiales
+        self.generate_alerts(commission.id)
+        
+        return commission
+
+    def get_commission(self, commission_id: int) -> Optional[Commission]:
+        """Récupère une commission par ID."""
+        return self.db.query(Commission).filter(
+            Commission.id == commission_id,
+            Commission.is_deleted == False
+        ).first()
+
+    def get_commission_by_workflow(self, workflow_id: int) -> Optional[Commission]:
+        """Récupère une commission par ID de workflow."""
+        return self.db.query(Commission).filter(
+            Commission.workflow_id == workflow_id,
+            Commission.is_deleted == False
+        ).first()
+
+    def list_commissions(
+        self,
+        skip: int = 0,
+        limit: int = 20,
+        search: Optional[str] = None,
+        status: Optional[CommissionStatus] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> Tuple[List[Commission], int]:
+        """Liste paginée avec recherche, filtres et tri."""
+        query = self.db.query(Commission).filter(
+            Commission.is_deleted == False
+        )
+
+        if search:
+            term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Commission.commission_number.ilike(term),
+                    Commission.title.ilike(term),
+                )
+            )
+
+        if status:
+            query = query.filter(Commission.status == status)
+
+        sort_column = self.SORTABLE_FIELDS.get(sort_by, Commission.created_at)
+        order_fn = desc if sort_order.lower() == "desc" else asc
+        query = query.order_by(order_fn(sort_column))
+
+        total = query.count()
+        commissions = query.offset(skip).limit(limit).all()
+
+        return commissions, total
+
+    def update_commission(
+        self,
+        commission_id: int,
+        data: Dict,
+        user_id: int,
+    ) -> Commission:
+        """Met à jour une commission."""
+        commission = self.get_commission(commission_id)
+        
+        if not commission:
+            raise ValueError("Commission non trouvée")
+        
+        # Mise à jour des champs
+        for field, value in data.items():
+            if hasattr(commission, field) and value is not None:
+                setattr(commission, field, value)
+        
+        # Mettre à jour le statut si nécessaire
+        if commission.status == CommissionStatus.TO_BE_CONSTITUTED and commission.members:
+            commission.status = CommissionStatus.CONSTITUTED
+            commission.constituted_at = datetime.utcnow()
+        
+        commission.updated_by = user_id
+        commission.updated_at = datetime.utcnow()
+        
+        self.db.commit()
+        self.db.refresh(commission)
+        
+        # Ajouter l'historique
+        self.add_history(
+            commission.id,
+            "Modification",
+            "Mise à jour de la commission",
+            user_id,
+        )
+        
+        return commission
+
+    def delete_commission(
+        self,
+        commission_id: int,
+        user_id: int,
+    ) -> bool:
+        """Suppression logique d'une commission."""
+        commission = self.get_commission(commission_id)
+        
+        if not commission:
+            raise ValueError("Commission non trouvée")
+        
+        commission.is_deleted = True
+        commission.deleted_at = datetime.utcnow()
+        commission.deleted_by = user_id
+        
+        self.db.commit()
+        
+        # Ajouter l'historique
+        self.add_history(
+            commission.id,
+            "Suppression",
+            "Suppression de la commission",
+            user_id,
+        )
+        
+        return True
+
+    def add_member(
+        self,
+        commission_id: int,
+        data: Dict,
+        user_id: int,
+    ) -> CommissionMember:
+        """Ajoute un membre à la commission."""
+        commission = self.get_commission(commission_id)
+        
+        if not commission:
+            raise ValueError("Commission non trouvée")
+        
+        from app.models.user import User
+        user = self.db.query(User).filter(User.id == data["user_id"]).first()
+        
+        if not user:
+            raise ValueError("Utilisateur non trouvé")
+        
         member = CommissionMember(
             commission_id=commission_id,
-            user_id=member_data['user_id'],
-            role=member_data['role'],
-            is_president=member_data.get('is_president', False),
-            created_at=datetime.utcnow()
+            user_id=data["user_id"],
+            role=data["role"],
+            is_president=data.get("is_president", False),
+            is_secretary=data.get("is_secretary", False),
+            user_name=user.full_name,
+            user_function=data.get("user_function"),
+            user_department=data.get("user_department"),
+            substitute_for_id=data.get("substitute_for_id"),
         )
         
         self.db.add(member)
         self.db.commit()
         self.db.refresh(member)
         
+        # Ajouter l'historique
+        self.add_history(
+            commission_id,
+            "Ajout membre",
+            f"Ajout du membre {user.full_name} ({data['role']})",
+            user_id,
+            member_id=member.id,
+        )
+        
         return member
-    
-    def convocate_members(self, commission_id: int, user_id: int) -> List[CommissionConvocation]:
-        """
-        Envoie les convocations aux membres de la commission
-        
-        Args:
-            commission_id: ID de la commission
-            user_id: ID de l'utilisateur
-            
-        Returns:
-            Liste des convocations créées
-        """
-        commission = self.db.query(Commission).filter(
-            Commission.id == commission_id
+
+    def remove_member(
+        self,
+        member_id: int,
+        user_id: int,
+    ) -> bool:
+        """Supprime un membre de la commission."""
+        member = self.db.query(CommissionMember).filter(
+            CommissionMember.id == member_id
         ).first()
+        
+        if not member:
+            raise ValueError("Membre non trouvé")
+        
+        commission_id = member.commission_id
+        self.db.delete(member)
+        self.db.commit()
+        
+        # Ajouter l'historique
+        self.add_history(
+            commission_id,
+            "Suppression membre",
+            f"Suppression du membre ID {member_id}",
+            user_id,
+            member_id=member_id,
+        )
+        
+        return True
+
+    def create_session(
+        self,
+        commission_id: int,
+        data: Dict,
+        user_id: int,
+    ) -> CommissionSession:
+        """Crée une nouvelle séance pour la commission."""
+        commission = self.get_commission(commission_id)
         
         if not commission:
             raise ValueError("Commission non trouvée")
         
-        members = self.db.query(CommissionMember).filter(
-            CommissionMember.commission_id == commission_id
+        # Déterminer le numéro de séance
+        last_session = self.db.query(CommissionSession).filter(
+            CommissionSession.commission_id == commission_id
+        ).order_by(CommissionSession.session_number.desc()).first()
+        
+        next_number = (last_session.session_number + 1) if last_session else 1
+        
+        session = CommissionSession(
+            commission_id=commission_id,
+            session_number=next_number,
+            session_title=data.get("session_title", f"Séance {next_number}"),
+            session_type=data.get("session_type"),
+            planned_date=data["planned_date"],
+            planned_time=data.get("planned_time"),
+            location=data.get("location"),
+            agenda=data.get("agenda"),
+            observations=data.get("observations"),
+            decisions=data.get("decisions"),
+            created_by=user_id,
+        )
+        
+        self.db.add(session)
+        self.db.commit()
+        self.db.refresh(session)
+        
+        # Mettre à jour le statut de la commission
+        if commission.status == CommissionStatus.CONSTITUTED:
+            commission.status = CommissionStatus.SESSIONS_PLANNED
+            commission.updated_by = user_id
+            commission.updated_at = datetime.utcnow()
+            self.db.commit()
+        
+        # Ajouter l'historique
+        self.add_history(
+            commission_id,
+            "Création séance",
+            f"Création de la séance {next_number}: {session.session_title}",
+            user_id,
+            session_id=session.id,
+        )
+        
+        # Générer les alertes
+        self.generate_alerts(commission_id)
+        
+        return session
+
+    def update_session(
+        self,
+        session_id: int,
+        data: Dict,
+        user_id: int,
+    ) -> CommissionSession:
+        """Met à jour une séance."""
+        session = self.db.query(CommissionSession).filter(
+            CommissionSession.id == session_id
+        ).first()
+        
+        if not session:
+            raise ValueError("Séance non trouvée")
+        
+        # Mise à jour des champs
+        for field, value in data.items():
+            if hasattr(session, field) and value is not None:
+                setattr(session, field, value)
+        
+        session.updated_by = user_id
+        session.updated_at = datetime.utcnow()
+        
+        self.db.commit()
+        self.db.refresh(session)
+        
+        # Ajouter l'historique
+        self.add_history(
+            session.commission_id,
+            "Modification séance",
+            f"Mise à jour de la séance {session.session_number}",
+            user_id,
+            session_id=session.id,
+        )
+        
+        return session
+
+    def update_session_status(
+        self,
+        session_id: int,
+        status: SessionStatus,
+        user_id: int,
+        postponed_to: Optional[datetime] = None,
+        postponed_reason: Optional[str] = None,
+        suspended_reason: Optional[str] = None,
+    ) -> CommissionSession:
+        """Met à jour le statut d'une séance."""
+        session = self.db.query(CommissionSession).filter(
+            CommissionSession.id == session_id
+        ).first()
+        
+        if not session:
+            raise ValueError("Séance non trouvée")
+        
+        session.status = status
+        
+        if status == SessionStatus.IN_PROGRESS:
+            session.started_at = datetime.utcnow()
+        elif status == SessionStatus.CLOSED:
+            session.ended_at = datetime.utcnow()
+        elif status == SessionStatus.POSTPONED:
+            session.postponed_to = postponed_to
+            session.postponed_reason = postponed_reason
+        elif status == SessionStatus.SUSPENDED:
+            session.suspended_reason = suspended_reason
+        
+        session.updated_by = user_id
+        session.updated_at = datetime.utcnow()
+        
+        self.db.commit()
+        self.db.refresh(session)
+        
+        # Mettre à jour le statut de la commission
+        commission = self.get_commission(session.commission_id)
+        if commission:
+            self.update_commission_status_based_on_sessions(commission, user_id)
+        
+        # Ajouter l'historique
+        self.add_history(
+            session.commission_id,
+            "Changement statut séance",
+            f"Séance {session.session_number}: {status.value}",
+            user_id,
+            session_id=session.id,
+        )
+        
+        # Générer les alertes
+        self.generate_alerts(session.commission_id)
+        
+        return session
+
+    def update_commission_status_based_on_sessions(
+        self,
+        commission: Commission,
+        user_id: int,
+    ):
+        """Met à jour le statut de la commission en fonction des séances."""
+        sessions = self.db.query(CommissionSession).filter(
+            CommissionSession.commission_id == commission.id
         ).all()
         
-        convocations = []
-        for member in members:
-            convocation = CommissionConvocation(
+        if not sessions:
+            return
+        
+        # Vérifier si une séance est en cours
+        in_progress = any(s.status == SessionStatus.IN_PROGRESS for s in sessions)
+        if in_progress:
+            commission.status = CommissionStatus.SESSION_IN_PROGRESS
+            commission.updated_by = user_id
+            commission.updated_at = datetime.utcnow()
+            return
+        
+        # Vérifier si toutes les séances sont clôturées
+        all_closed = all(s.status == SessionStatus.CLOSED for s in sessions)
+        if all_closed:
+            commission.status = CommissionStatus.SESSION_CLOSED
+            commission.updated_by = user_id
+            commission.updated_at = datetime.utcnow()
+            return
+        
+        # Vérifier si au moins une séance est planifiée
+        any_planned = any(s.status == SessionStatus.PLANNED for s in sessions)
+        if any_planned:
+            commission.status = CommissionStatus.SESSIONS_PLANNED
+            commission.updated_by = user_id
+            commission.updated_at = datetime.utcnow()
+            return
+
+    def generate_pv(
+        self,
+        session_id: int,
+        pv_content: str,
+        user_id: int,
+    ) -> CommissionSession:
+        """Génère le procès-verbal d'une séance."""
+        session = self.db.query(CommissionSession).filter(
+            CommissionSession.id == session_id
+        ).first()
+        
+        if not session:
+            raise ValueError("Séance non trouvée")
+        
+        session.pv_content = pv_content
+        session.pv_generated = True
+        session.pv_generated_by = user_id
+        session.pv_generated_at = datetime.utcnow()
+        
+        session.updated_by = user_id
+        session.updated_at = datetime.utcnow()
+        
+        self.db.commit()
+        self.db.refresh(session)
+        
+        # Ajouter l'historique
+        self.add_history(
+            session.commission_id,
+            "Génération PV",
+            f"PV généré pour la séance {session.session_number}",
+            user_id,
+            session_id=session.id,
+        )
+        
+        return session
+
+    def close_commission(
+        self,
+        commission_id: int,
+        user_id: int,
+    ) -> Commission:
+        """Clôture la commission."""
+        commission = self.get_commission(commission_id)
+        
+        if not commission:
+            raise ValueError("Commission non trouvée")
+        
+        commission.status = CommissionStatus.COMMISSION_CLOSED
+        commission.closed_at = datetime.utcnow()
+        commission.updated_by = user_id
+        commission.updated_at = datetime.utcnow()
+        
+        self.db.commit()
+        self.db.refresh(commission)
+        
+        # Ajouter l'historique
+        self.add_history(
+            commission_id,
+            "Clôture",
+            "Clôture de la commission",
+            user_id,
+        )
+        
+        return commission
+
+    def add_history(
+        self,
+        commission_id: int,
+        action: str,
+        description: Optional[str],
+        user_id: int,
+        session_id: Optional[int] = None,
+        member_id: Optional[int] = None,
+    ) -> CommissionHistory:
+        """Ajoute une entrée à l'historique."""
+        from app.models.user import User
+        
+        user = self.db.query(User).filter(User.id == user_id).first()
+        user_name = user.full_name if user else "Inconnu"
+        
+        history = CommissionHistory(
+            commission_id=commission_id,
+            action=action,
+            description=description,
+            session_id=session_id,
+            member_id=member_id,
+            user_id=user_id,
+            user_name=user_name,
+        )
+        
+        self.db.add(history)
+        self.db.commit()
+        self.db.refresh(history)
+        
+        return history
+
+    def get_history(self, commission_id: int) -> List[CommissionHistory]:
+        """Récupère l'historique d'une commission."""
+        return self.db.query(CommissionHistory).filter(
+            CommissionHistory.commission_id == commission_id
+        ).order_by(CommissionHistory.created_at.desc()).all()
+
+    def generate_alerts(self, commission_id: int):
+        """Génère les alertes pour une commission."""
+        commission = self.get_commission(commission_id)
+        if not commission:
+            return
+        
+        # Supprimer les anciennes alertes non résolues
+        self.db.query(CommissionAlert).filter(
+            CommissionAlert.commission_id == commission_id,
+            CommissionAlert.is_resolved == False
+        ).delete()
+        
+        # Alerte: Commission à constituer
+        if commission.status == CommissionStatus.TO_BE_CONSTITUTED:
+            alert = CommissionAlert(
                 commission_id=commission_id,
-                member_id=member.id,
-                sent_at=datetime.utcnow(),
-                sent_by=user_id,
-                sending_method='email'
+                alert_type="to_be_constituted",
+                severity="medium",
+                title="Commission à constituer",
+                message="La commission doit être constituée avec ses membres",
             )
-            
-            self.db.add(convocation)
-            convocations.append(convocation)
+            self.db.add(alert)
         
-        commission.status = CommissionStatus.CONVOKED
-        commission.updated_by = user_id
-        commission.updated_at = datetime.utcnow()
-        
-        self.db.commit()
-        
-        return convocations
-    
-    def start_commission(self, commission_id: int, user_id: int) -> Commission:
-        """
-        Démarre une commission (marque comme en cours)
-        
-        Args:
-            commission_id: ID de la commission
-            user_id: ID de l'utilisateur
-            
-        Returns:
-            Instance de Commission mise à jour
-        """
-        commission = self.db.query(Commission).filter(
-            Commission.id == commission_id
-        ).first()
-        
-        if not commission:
-            raise ValueError("Commission non trouvée")
-        
-        commission.status = CommissionStatus.IN_PROGRESS
-        commission.updated_by = user_id
-        commission.updated_at = datetime.utcnow()
-        
-        self.db.commit()
-        self.db.refresh(commission)
-        
-        return commission
-    
-    def record_attendance(self, commission_id: int, attendance_data: dict) -> Commission:
-        """
-        Enregistre la présence des membres
-        
-        Args:
-            commission_id: ID de la commission
-            attendance_data: Dictionnaire {member_id: attended}
-            
-        Returns:
-            Instance de Commission mise à jour
-        """
-        commission = self.db.query(Commission).filter(
-            Commission.id == commission_id
-        ).first()
-        
-        if not commission:
-            raise ValueError("Commission non trouvée")
-        
-        members = self.db.query(CommissionMember).filter(
-            CommissionMember.commission_id == commission_id
+        # Alerte: Séance proche (dans les 3 jours)
+        sessions = self.db.query(CommissionSession).filter(
+            CommissionSession.commission_id == commission_id,
+            CommissionSession.status == SessionStatus.PLANNED
         ).all()
         
-        actual_members = 0
-        for member in members:
-            attended = attendance_data.get(member.id, False)
-            member.attended = attended
-            if attended:
-                member.attendance_time = datetime.utcnow()
-                actual_members += 1
+        for session in sessions:
+            if session.planned_date:
+                days_until = (session.planned_date - datetime.utcnow()).days
+                if days_until <= 3 and days_until >= 0:
+                    alert = CommissionAlert(
+                        commission_id=commission_id,
+                        session_id=session.id,
+                        alert_type="session_upcoming",
+                        severity="high" if days_until <= 1 else "medium",
+                        title=f"Séance {session.session_number} proche (" + str(days_until) + " jours)",
+                        message=f"La séance {session.session_number} est prévue le {session.planned_date.strftime('%d/%m/%Y')}",
+                    )
+                    self.db.add(alert)
         
-        commission.actual_members = actual_members
-        commission.quorum_reached = actual_members >= commission.required_members
+        # Alerte: Séance reportée
+        postponed_sessions = self.db.query(CommissionSession).filter(
+            CommissionSession.commission_id == commission_id,
+            CommissionSession.status == SessionStatus.POSTPONED
+        ).all()
         
-        self.db.commit()
-        self.db.refresh(commission)
-        
-        return commission
-    
-    def generate_pv(self, commission_id: int, pv_content: str, user_id: int) -> Commission:
-        """
-        Génère le procès-verbal de la commission
-        
-        Args:
-            commission_id: ID de la commission
-            pv_content: Contenu du PV
-            user_id: ID de l'utilisateur
-            
-        Returns:
-            Instance de Commission mise à jour
-        """
-        commission = self.db.query(Commission).filter(
-            Commission.id == commission_id
-        ).first()
-        
-        if not commission:
-            raise ValueError("Commission non trouvée")
-        
-        commission.pv_content = pv_content
-        commission.pv_generated = True
-        commission.pv_generated_by = user_id
-        commission.pv_generated_at = datetime.utcnow()
-        
-        self.db.commit()
-        self.db.refresh(commission)
-        
-        return commission
-    
-    def complete_commission(self, commission_id: int, user_id: int) -> Commission:
-        """
-        Termine une commission
-        
-        Args:
-            commission_id: ID de la commission
-            user_id: ID de l'utilisateur
-            
-        Returns:
-            Instance de Commission terminée
-        """
-        commission = self.db.query(Commission).filter(
-            Commission.id == commission_id
-        ).first()
-        
-        if not commission:
-            raise ValueError("Commission non trouvée")
-        
-        commission.status = CommissionStatus.COMPLETED
-        commission.updated_by = user_id
-        commission.updated_at = datetime.utcnow()
-        
-        self.db.commit()
-        self.db.refresh(commission)
-        
-        return commission
-    
-    def cancel_commission(self, commission_id: int, user_id: int, reason: str) -> Commission:
-        """
-        Annule une commission
-        
-        Args:
-            commission_id: ID de la commission
-            user_id: ID de l'utilisateur
-            reason: Motif de l'annulation
-            
-        Returns:
-            Instance de Commission annulée
-        """
-        commission = self.db.query(Commission).filter(
-            Commission.id == commission_id
-        ).first()
-        
-        if not commission:
-            raise ValueError("Commission non trouvée")
-        
-        commission.status = CommissionStatus.CANCELLED
-        commission.description = f"ANNULÉ: {reason}"
-        commission.updated_by = user_id
-        commission.updated_at = datetime.utcnow()
-        
-        self.db.commit()
-        self.db.refresh(commission)
-        
-        return commission
-    
-    def get_upcoming_commissions(self, days_ahead: int = 7) -> List[Commission]:
-        """
-        Récupère les commissions à venir dans les X jours
-        
-        Args:
-            days_ahead: Nombre de jours à venir
-            
-        Returns:
-            Liste des commissions à venir
-        """
-        cutoff_date = datetime.utcnow() + timedelta(days=days_ahead)
-        
-        return self.db.query(Commission).filter(
-            and_(
-                Commission.planned_date >= datetime.utcnow(),
-                Commission.planned_date <= cutoff_date,
-                Commission.status.in_([CommissionStatus.PLANNED, CommissionStatus.CONVOKED])
+        for session in postponed_sessions:
+            alert = CommissionAlert(
+                commission_id=commission_id,
+                session_id=session.id,
+                alert_type="session_postponed",
+                severity="high",
+                title=f"Séance {session.session_number} reportée",
+                message=f"La séance {session.session_number} a été reportée. Nouvelle date: {session.postponed_to.strftime('%d/%m/%Y') if session.postponed_to else 'Non définie'}",
             )
-        ).order_by(Commission.planned_date).all()
-    
-    def get_commissions_by_market(self, market_id: int) -> List[Commission]:
-        """
-        Récupère toutes les commissions d'un marché
+            self.db.add(alert)
         
-        Args:
-            market_id: ID du marché
-            
-        Returns:
-            Liste des commissions
-        """
-        return self.db.query(Commission).filter(
-            Commission.market_id == market_id
-        ).order_by(Commission.planned_date).all()
-    
-    def _generate_reference(self, commission_type: CommissionType) -> str:
-        """
-        Génère une référence de commission
+        # Alerte: PV manquant pour les séances clôturées
+        closed_sessions = self.db.query(CommissionSession).filter(
+            CommissionSession.commission_id == commission_id,
+            CommissionSession.status == SessionStatus.CLOSED,
+            CommissionSession.pv_generated == False
+        ).all()
         
-        Args:
-            commission_type: Type de commission
-            
-        Returns:
-            Référence générée
-        """
-        prefix = {
-            CommissionType.OPENING: "CO",
-            CommissionType.TECHNICAL: "CT",
-            CommissionType.FINANCIAL: "CF",
-            CommissionType.ATTRIBUTION: "CA",
-            CommissionType.APPEL_OFFRES: "CAP"
+        for session in closed_sessions:
+            alert = CommissionAlert(
+                commission_id=commission_id,
+                session_id=session.id,
+                alert_type="pv_missing",
+                severity="high",
+                title=f"PV manquant pour séance {session.session_number}",
+                message=f"La séance {session.session_number} est clôturée mais le PV n'a pas été généré",
+            )
+            self.db.add(alert)
+        
+        self.db.commit()
+
+    def get_alerts(self, commission_id: int) -> List[CommissionAlert]:
+        """Récupère les alertes d'une commission."""
+        return self.db.query(CommissionAlert).filter(
+            CommissionAlert.commission_id == commission_id,
+            CommissionAlert.is_resolved == False
+        ).order_by(CommissionAlert.created_at.desc()).all()
+
+    def resolve_alert(self, alert_id: int, user_id: int) -> bool:
+        """Résout une alerte."""
+        alert = self.db.query(CommissionAlert).filter(
+            CommissionAlert.id == alert_id
+        ).first()
+        
+        if not alert:
+            raise ValueError("Alerte non trouvée")
+        
+        alert.is_resolved = True
+        alert.resolved_at = datetime.utcnow()
+        alert.resolved_by = user_id
+        
+        self.db.commit()
+        
+        return True
+
+    def get_statistics(self) -> Dict:
+        """Calcule les statistiques des commissions."""
+        total = self.db.query(Commission).filter(
+            Commission.is_deleted == False
+        ).count()
+        
+        by_status = {}
+        for status in CommissionStatus:
+            count = self.db.query(Commission).filter(
+                Commission.status == status,
+                Commission.is_deleted == False
+            ).count()
+            by_status[status.value] = count
+        
+        total_sessions = self.db.query(CommissionSession).count()
+        
+        sessions_by_status = {}
+        for status in SessionStatus:
+            count = self.db.query(CommissionSession).filter(
+                CommissionSession.status == status
+            ).count()
+            sessions_by_status[status.value] = count
+        
+        return {
+            "total": total,
+            "by_status": by_status,
+            "total_sessions": total_sessions,
+            "sessions_by_status": sessions_by_status,
         }
-        
-        year = datetime.utcnow().year
-        count = self.db.query(Commission).filter(
-            Commission.commission_type == commission_type
-        ).count() + 1
-        
-        return f"{prefix.get(commission_type, 'COM')}-{year}-{count:04d}"
 
 
 def get_commission_service(db: Session) -> CommissionService:
-    """
-    Factory pour créer une instance du service de commission
-    
-    Args:
-        db: Session de base de données
-        
-    Returns:
-        Instance de CommissionService
-    """
+    """Factory function pour obtenir une instance de CommissionService."""
     return CommissionService(db)

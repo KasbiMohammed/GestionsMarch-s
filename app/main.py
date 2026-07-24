@@ -14,7 +14,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from app.config import settings
 from app.database import engine, get_db, init_db
-from app.api import auth, users, markets, stages, documents, dashboard, search, exports, analysis, market_planning, market_preparation, validation_workflow
+from app.api import auth, users, markets, stages, documents, dashboard, search, exports, analysis, market_planning, market_preparation, validation_workflow, commission, publication, supervision
 
 # Création de l'application FastAPI
 app = FastAPI(
@@ -154,6 +154,9 @@ app.include_router(analysis.router, prefix="/api/analysis", tags=["Analysis"])
 app.include_router(market_planning.router, prefix="/api/market-planning", tags=["Market Planning"])
 app.include_router(market_preparation.router, prefix="/api/market-preparation", tags=["Market Preparation"])
 app.include_router(validation_workflow.router, prefix="/api/validation-workflow", tags=["Validation Workflow"])
+app.include_router(commission.router, prefix="/api/commission", tags=["Commission"])
+app.include_router(publication.router, prefix="/api/publication", tags=["Publication"])
+app.include_router(supervision.router, prefix="/api/supervision", tags=["Supervision"])
 
 
 # Routes pages HTML
@@ -389,6 +392,71 @@ async def validation_detail_page(request: Request, workflow_id: int, db: Session
     
     user = get_current_user_from_token(access_token, db)
     return templates.TemplateResponse("validation/detail.html", {"request": request, "user": user})
+
+
+@app.get("/commission", response_class=HTMLResponse)
+async def commission_page(request: Request, db: Session = Depends(get_db)):
+    """Page de gestion des commissions"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("commission/list.html", {"request": request, "user": user})
+
+
+@app.get("/commission/{commission_id}", response_class=HTMLResponse)
+async def commission_detail_page(request: Request, commission_id: int, db: Session = Depends(get_db)):
+    """Page de détail d'une commission"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("commission/detail.html", {"request": request, "user": user})
+
+
+@app.get("/publication", response_class=HTMLResponse)
+async def publication_page(request: Request, db: Session = Depends(get_db)):
+    """Page de gestion des publications"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("publication/list.html", {"request": request, "user": user})
+
+
+@app.get("/publication/{publication_id}", response_class=HTMLResponse)
+async def publication_detail_page(request: Request, publication_id: int, db: Session = Depends(get_db)):
+    """Page de détail d'une publication"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("publication/detail.html", {"request": request, "user": user})
+
+
+@app.get("/supervision", response_class=HTMLResponse)
+async def supervision_page(request: Request, db: Session = Depends(get_db)):
+    """Page du dashboard de supervision"""
+    from app.api.auth import get_current_user_from_token
+    
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    
+    user = get_current_user_from_token(access_token, db)
+    return templates.TemplateResponse("supervision/dashboard.html", {"request": request, "user": user})
 
 
 if __name__ == "__main__":

@@ -101,7 +101,7 @@ class Market(Base):
     # Relations ajoutées (manquaient et provoquaient des erreurs de mapping SQLAlchemy)
     alerts = relationship("Alert", back_populates="market", cascade="all, delete-orphan")
     attribution = relationship("Attribution", back_populates="market", uselist=False, cascade="all, delete-orphan")
-    commissions = relationship("Commission", back_populates="market", cascade="all, delete-orphan")
+    # Commission is related to ValidationWorkflow, not directly to Market
     service_orders = relationship("ServiceOrder", back_populates="market", cascade="all, delete-orphan")
     execution_plan = relationship("ExecutionPlan", back_populates="market", uselist=False, cascade="all, delete-orphan")
     attachments = relationship("Attachment", back_populates="market", cascade="all, delete-orphan")

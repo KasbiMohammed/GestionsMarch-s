@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}Détail Publication - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Détail de la Publication</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/publication" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deletePublication()">
+            <i class="bi bi-trash"></i> Supprimer
+        </button>
+    </div>
+</div>
+
+<div id="publicationDetail">
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Chargement...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let publicationId = window.location.pathname.split('/').pop();
+
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadPublicationDetail();
+});
+
+async function loadPublicationDetail() {
+    try {
+        const response = await authenticatedFetch(`/api/publication/${publicationId}`);
+        const pub = await response.json();
+        
+        displayPublicationDetail(pub);
+    } catch (error) {
+        console.error('Erreur lors du chargement:', error);
+        document.getElementById('publicationDetail').innerHTML = `
+            <div class="alert alert-danger">
+                Erreur lors du chargement de la publication
+            </div>`;
+    }
+}
+
+function displayPublicationDetail(pub) {
+    const statusColors = {
+        'brouillon': 'secondary',
+        'en_attente': 'warning',
+        'publie': 'success',
+        'reporte': 'warning',
+        'modifie': 'info',
+        'annule': 'danger',
+        'cloture': 'success'
+    };
+    
+    const statusLabels = {
+        'brouillon': 'Brouillon',
+        'en_attente': 'En attente',
+        'publie': 'Publié',
+        'reporte': 'Reporté',
+        'modifie': 'Modifié',
+        'annule': 'Annulé',
+        'cloture': 'Clôturé'
+    };
+    
+    const typeLabels = {
+        'initiale': 'Initiale',
+        'modification': 'Modification',
+        'report': 'Report',
+        'annulation': 'Annulation',
+        'rectificatif': 'Rectificatif'
+    };
+    
+    const procedureLabels = {
+        'appel_offres': 'Appel d\'offres',
+        'consultation': 'Consultation',
+        'marche_simplifie': 'Marché simplifié',
+        'gre_procedure_adaptee': 'GRE à procédure adaptée',
+        'entreprise_travaux': 'Entreprise de travaux'
+    };
+    
+    document.getElementById('publicationDetail').innerHTML = `
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Informations générales</h5>
+                        <span class="badge bg-${statusColors[pub.status] || 'secondary'}">${statusLabels[pub.status] || pub.status}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="text-muted small">Numéro de publication</label>
+                                <p><strong>${pub.publication_number || '-'}</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Commission ID</label>
+                                <p><a href="/commission/${pub.commission_id}">${pub.commission_id}</a></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Numéro d'avis</label>
+                                <p>${pub.notice_number || '-'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Type de publication</label>
+                                <p>${typeLabels[pub.publication_type] || pub.publication_type}</p>
+                            </div>
+                            <div class="col-12">
+                                <label class="text-muted small">Objet</label>
+                                <p><strong>${pub.object}</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Procédure</label>
+                                <p>${procedureLabels[pub.procedure_type] || pub.procedure_type}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Maître d'ouvrage</label>
+                                <p>${pub.contracting_authority || '-'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Montant estimé</label>
+                                <p>${pub.estimated_amount ? new Intl.NumberFormat('fr-MA', { style: 'currency', currency: pub.currency }).format(pub.estimated_amount) : '-'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Délai de remise</label>
+                                <p>${pub.submission_delay_days ? pub.submission_delay_days + ' jours' : '-'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Dates importantes</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="text-muted small">Date de publication</label>
+                            <p>${formatDate(pub.publication_date)}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small">Date limite de remise</label>
+                            <p>${formatDate(pub.submission_deadline)}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small">Date d'ouverture des plis</label>
+                            <p>${formatDate(pub.bid_opening_date)} ${pub.bid_opening_time ? 'à ' + pub.bid_opening_time : ''}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Supports de publication</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="showAddSupportModal()">
+                            <i class="bi bi-plus"></i> Ajouter un support
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        ${pub.supports.length === 0 ? 
+                            '<p class="text-muted">Aucun support</p>' : 
+                            pub.supports.map(support => `
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                                    <div>
+                                        <strong>${support.support_type.value}</strong>
+                                        ${support.support_name ? `<br><small class="text-muted">${support.support_name}</small>` : ''}
+                                        ${support.publication_date ? `<br><small class="text-muted">Publié le ${formatDate(support.publication_date)}</small>` : ''}
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="removeSupport(${support.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Calendrier des échéances</h5>
+                    </div>
+                    <div class="card-body">
+                        ${pub.deadlines.length === 0 ? 
+                            '<p class="text-muted">Aucune échéance</p>' : 
+                            pub.deadlines.map(deadline => `
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded ${deadline.is_completed ? 'border-success bg-light' : ''}">
+                                    <div>
+                                        <strong>${deadline.description || deadline.deadline_type}</strong>
+                                        <br>
+                                        <small class="text-muted">${formatDate(deadline.deadline_date)} ${deadline.deadline_time ? 'à ' + deadline.deadline_time : ''}</small>
+                                        ${deadline.is_completed ? '<span class="badge bg-success ms-2">Complété</span>' : ''}
+                                    </div>
+                                    ${!deadline.is_completed ? `
+                                        <button class="btn btn-sm btn-outline-success" onclick="completeDeadline(${deadline.id})">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Alertes</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="alertsList">
+                            ${pub.alerts.length === 0 ? 
+                                '<p class="text-muted">Aucune alerte</p>' : 
+                                pub.alerts.map(alert => `
+                                    <div class="alert alert-${alert.severity === 'high' ? 'danger' : alert.severity === 'medium' ? 'warning' : 'info'} d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>${alert.title}</strong>
+                                            <p class="mb-0 small">${alert.message}</p>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="resolveAlert(${alert.id})">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Observations</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>${pub.observations || 'Aucune observation'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Historique</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                        <th>Utilisateur</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${pub.history.length === 0 ? 
+                                        '<tr><td colspan="4" class="text-center">Aucun historique</td></tr>' : 
+                                        pub.history.map(h => `
+                                            <tr>
+                                                <td>${formatDate(h.created_at)}</td>
+                                                <td>${h.action}</td>
+                                                <td>${h.user_name || '-'}</td>
+                                                <td>${h.description || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function formatDate(date) {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR');
+}
+
+function deletePublication() {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette publication ?')) {
+        authenticatedFetch(`/api/publication/${publicationId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                showNotification('Publication supprimée', 'success');
+                window.location.href = '/publication';
+            } else {
+                showNotification('Erreur lors de la suppression', 'danger');
+            }
+        });
+    }
+}
+
+function showAddSupportModal() {
+    showNotification('Fonctionnalité d\'ajout de support en cours de développement', 'info');
+}
+
+function removeSupport(supportId) {
+    showNotification('Fonctionnalité de suppression de support en cours de développement', 'info');
+}
+
+function completeDeadline(deadlineId) {
+    authenticatedFetch(`/api/publication/deadlines/${deadlineId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ is_completed: true })
+    }).then(response => {
+        if (response.ok) {
+            showNotification('Échéance complétée', 'success');
+            loadPublicationDetail();
+        } else {
+            showNotification('Erreur lors de la mise à jour', 'danger');
+        }
+    });
+}
+
+function resolveAlert(alertId) {
+    authenticatedFetch(`/api/publication/alerts/${alertId}/resolve`, {
+        method: 'POST'
+    }).then(response => {
+        if (response.ok) {
+            showNotification('Alerte résolue', 'success');
+            loadPublicationDetail();
+        } else {
+            showNotification('Erreur lors de la résolution', 'danger');
+        }
+    });
+}
+</script>
+{% endblock %}

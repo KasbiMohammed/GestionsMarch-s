@@ -76,6 +76,16 @@ async function loadPreparationDetail() {
         const response = await authenticatedFetch(`/api/market-preparation/${preparationId}`);
         const prep = await response.json();
         
+        // Check if validation workflow exists
+        const workflowResponse = await authenticatedFetch(`/api/validation-workflow/preparation/${preparationId}`);
+        const workflow = workflowResponse.ok ? await workflowResponse.json() : null;
+        
+        // Show/hide start validation button
+        const startBtn = document.getElementById('startValidationBtn');
+        if (startBtn) {
+            startBtn.style.display = workflow ? 'none' : 'inline-block';
+        }
+        
         displayPreparationDetail(prep);
     } catch (error) {
         console.error('Erreur lors du chargement:', error);
@@ -421,6 +431,31 @@ function resolveAlert(alertId) {
             showNotification('Erreur lors de la résolution', 'danger');
         }
     });
+}
+
+async function startValidation() {
+    try {
+        const response = await authenticatedFetch('/api/validation-workflow/', {
+            method: 'POST',
+            body: JSON.stringify({
+                preparation_id: preparationId
+            })
+        });
+        
+        if (response.ok) {
+            const workflow = await response.json();
+            showNotification('Workflow de validation créé', 'success');
+            setTimeout(() => {
+                window.location.href = `/validation/${workflow.id}`;
+            }, 1500);
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de la création du workflow', 'danger');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la création du workflow:', error);
+        showNotification('Erreur lors de la création du workflow', 'danger');
+    }
 }
 </script>
 {% endblock %}
