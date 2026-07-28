@@ -40,37 +40,41 @@ def setup_pdf_document(filepath: str):
     
     styles = getSampleStyleSheet()
     
-    # Styles personnalisés
-    styles.add(ParagraphStyle(
-        name='Title',
-        parent=styles['Heading1'],
-        fontSize=18,
-        textColor=colors.darkblue,
-        alignment=TA_CENTER,
-        spaceAfter=20
-    ))
+    # Styles personnalisés - vérifier s'ils existent déjà
+    if 'Title' not in styles:
+        styles.add(ParagraphStyle(
+            name='Title',
+            parent=styles['Heading1'],
+            fontSize=18,
+            textColor=colors.darkblue,
+            alignment=TA_CENTER,
+            spaceAfter=20
+        ))
     
-    styles.add(ParagraphStyle(
-        name='Subtitle',
-        parent=styles['Heading2'],
-        fontSize=14,
-        textColor=colors.darkblue,
-        spaceAfter=12
-    ))
+    if 'Subtitle' not in styles:
+        styles.add(ParagraphStyle(
+            name='Subtitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.darkblue,
+            spaceAfter=12
+        ))
     
-    styles.add(ParagraphStyle(
-        name='NormalRight',
-        parent=styles['Normal'],
-        alignment=TA_RIGHT
-    ))
+    if 'NormalRight' not in styles:
+        styles.add(ParagraphStyle(
+            name='NormalRight',
+            parent=styles['Normal'],
+            alignment=TA_RIGHT
+        ))
     
-    styles.add(ParagraphStyle(
-        name='HeaderCell',
-        parent=styles['Normal'],
-        fontSize=10,
-        textColor=colors.white,
-        alignment=TA_CENTER
-    ))
+    if 'HeaderCell' not in styles:
+        styles.add(ParagraphStyle(
+            name='HeaderCell',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.white,
+            alignment=TA_CENTER
+        ))
     
     return doc, styles
 
@@ -460,6 +464,127 @@ def export_planning_to_pdf(planning: MarketPlanning, filepath: str):
         
         obs_paragraph = Paragraph(planning.observations, styles['Normal'])
         story.append(obs_paragraph)
+    
+    # Pied de page
+    story.append(Spacer(1, 2*cm))
+    footer = Paragraph(
+        f"Document généré automatiquement le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
+        styles['NormalRight']
+    )
+    story.append(footer)
+    
+    # Générer le PDF
+    doc.build(story)
+
+
+def export_dashboard_to_pdf(stats: dict, filepath: str):
+    """
+    Exporte les statistiques du dashboard vers un fichier PDF
+    
+    Args:
+        stats: Dictionnaire des statistiques du dashboard
+        filepath: Chemin du fichier PDF de sortie
+    """
+    doc, styles = setup_pdf_document(filepath)
+    story = []
+    
+    # Titre
+    title = Paragraph("Rapport du Tableau de Bord", styles['Title'])
+    story.append(title)
+    story.append(Spacer(1, 0.5*cm))
+    
+    # Date de génération
+    date_paragraph = Paragraph(
+        f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
+        styles['NormalRight']
+    )
+    story.append(date_paragraph)
+    story.append(Spacer(1, 1*cm))
+    
+    # Statistiques des marchés
+    subtitle = Paragraph("Statistiques des Marchés", styles['Subtitle'])
+    story.append(subtitle)
+    story.append(Spacer(1, 0.3*cm))
+    
+    market_stats = stats.get('markets', {})
+    market_data = [
+        ["Métrique", "Valeur"],
+        ["Total des marchés", str(market_stats.get('total', 0))],
+        ["En cours", str(market_stats.get('en_cours', 0))],
+        ["Terminés", str(market_stats.get('termine', 0))],
+        ["En retard", str(market_stats.get('en_retard', 0))],
+        ["En attente", str(market_stats.get('en_attente', 0))],
+        ["Annulés", str(market_stats.get('annule', 0))],
+        ["Suspendus", str(market_stats.get('suspendu', 0))],
+    ]
+    
+    market_table = Table(market_data, colWidths=[8*cm, 4*cm])
+    market_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    
+    story.append(market_table)
+    story.append(Spacer(1, 1*cm))
+    
+    # Montants
+    subtitle = Paragraph("Montants Budgétaires", styles['Subtitle'])
+    story.append(subtitle)
+    story.append(Spacer(1, 0.3*cm))
+    
+    amounts = stats.get('amounts', {})
+    amount_data = [
+        ["Métrique", "Valeur"],
+        ["Montant estimé total", f"{amounts.get('total_estimated', 0):,.2f} MAD"],
+        ["Montant définitif total", f"{amounts.get('total_definitive', 0):,.2f} MAD"],
+        ["Montant attribué", f"{amounts.get('total_attributed', 0):,.2f} MAD"],
+        ["Montant payé", f"{amounts.get('total_paid', 0):,.2f} MAD"],
+        ["Budget restant", f"{amounts.get('remaining', 0):,.2f} MAD"],
+        ["Écart estimation/attribution", f"{amounts.get('variance', 0):,.2f} MAD"],
+    ]
+    
+    amount_table = Table(amount_data, colWidths=[8*cm, 4*cm])
+    amount_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    
+    story.append(amount_table)
+    story.append(Spacer(1, 1*cm))
+    
+    # Planification
+    subtitle = Paragraph("Planification", styles['Subtitle'])
+    story.append(subtitle)
+    story.append(Spacer(1, 0.3*cm))
+    
+    planning = stats.get('planning', {})
+    planning_data = [
+        ["Métrique", "Valeur"],
+        ["Total planifications", str(planning.get('total', 0))],
+        ["Budget planifié", f"{planning.get('budget', 0):,.2f} MAD"],
+        ["Validées", str(planning.get('validated', 0))],
+        ["Programmées", str(planning.get('programmed', 0))],
+    ]
+    
+    planning_table = Table(planning_data, colWidths=[8*cm, 4*cm])
+    planning_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    
+    story.append(planning_table)
     
     # Pied de page
     story.append(Spacer(1, 2*cm))
