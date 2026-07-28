@@ -275,3 +275,89 @@ async def export_planning_pdf(
         filename=filename,
         media_type="application/pdf"
     )
+
+
+@router.get("/dashboard/excel")
+async def export_dashboard_excel(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Exporte les données du tableau de bord en Excel
+    
+    Args:
+        current_user: Utilisateur actuel
+        db: Session de base de données
+        
+    Returns:
+        Fichier Excel avec les statistiques du dashboard
+    """
+    if not can_export_data(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to export data"
+        )
+    
+    from app.exports.excel_export import export_dashboard_to_excel
+    
+    # Récupérer les données du dashboard
+    from app.api.dashboard import get_dashboard_statistics
+    stats = await get_dashboard_statistics(current_user, db)
+    
+    # Générer le fichier Excel
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"dashboard_export_{timestamp}.xlsx"
+    filepath = os.path.join("exports", filename)
+    
+    os.makedirs("exports", exist_ok=True)
+    
+    export_dashboard_to_excel(stats, filepath)
+    
+    return FileResponse(
+        path=filepath,
+        filename=filename,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
+@router.get("/dashboard/pdf")
+async def export_dashboard_pdf(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Exporte les données du tableau de bord en PDF
+    
+    Args:
+        current_user: Utilisateur actuel
+        db: Session de base de données
+        
+    Returns:
+        Fichier PDF avec les statistiques du dashboard
+    """
+    if not can_export_data(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to export data"
+        )
+    
+    from app.exports.pdf_export import export_dashboard_to_pdf
+    
+    # Récupérer les données du dashboard
+    from app.api.dashboard import get_dashboard_statistics
+    stats = await get_dashboard_statistics(current_user, db)
+    
+    # Générer le fichier PDF
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"dashboard_export_{timestamp}.pdf"
+    filepath = os.path.join("exports", filename)
+    
+    os.makedirs("exports", exist_ok=True)
+    
+    export_dashboard_to_pdf(stats, filepath)
+    
+    return FileResponse(
+        path=filepath,
+        filename=filename,
+        media_type="application/pdf"
+    )

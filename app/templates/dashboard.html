@@ -12,12 +12,61 @@
         <a href="/markets/new" class="btn btn-sm btn-primary me-2">
             <i class="bi bi-plus-circle"></i> Nouveau Marché
         </a>
-        <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="exportDashboard()">
-            <i class="bi bi-download"></i> Exporter
+        <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="exportDashboardExcel()">
+            <i class="bi bi-file-earmark-excel"></i> Excel
         </button>
-        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshDashboard()">
+        <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="exportDashboardPDF()">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="refreshDashboard()">
             <i class="bi bi-arrow-clockwise"></i> Actualiser
         </button>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Année</label>
+                <select class="form-select" id="filterYear" onchange="applyFilters()">
+                    <option value="">Toutes</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Service</label>
+                <select class="form-select" id="filterService" onchange="applyFilters()">
+                    <option value="">Tous</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Procédure</label>
+                <select class="form-select" id="filterProcedure" onchange="applyFilters()">
+                    <option value="">Toutes</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Type</label>
+                <select class="form-select" id="filterType" onchange="applyFilters()">
+                    <option value="">Tous</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Statut</label>
+                <select class="form-select" id="filterStatus" onchange="applyFilters()">
+                    <option value="">Tous</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                    <i class="bi bi-x-circle"></i> Réinitialiser
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -38,7 +87,7 @@
 <!-- Statistiques principales -->
 <div class="row" id="statsCards">
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card border-primary">
+        <div class="card stat-card border-primary clickable" onclick="navigateToMarkets('')" style="cursor: pointer;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -54,7 +103,7 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card border-success">
+        <div class="card stat-card border-success clickable" onclick="navigateToMarkets('en_cours')" style="cursor: pointer;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -70,7 +119,7 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card border-warning">
+        <div class="card stat-card border-warning clickable" onclick="navigateToMarkets('en_retard')" style="cursor: pointer;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -86,7 +135,7 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card border-info">
+        <div class="card stat-card border-info clickable" onclick="navigateToMarkets('termine')" style="cursor: pointer;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -95,6 +144,73 @@
                     </div>
                     <div class="text-info">
                         <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deuxième ligne de KPIs -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card border-secondary clickable" onclick="navigateToMarkets('annule')" style="cursor: pointer;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Annulés</h6>
+                        <h3 class="mb-0 text-secondary" id="annuleMarkets">0</h3>
+                    </div>
+                    <div class="text-secondary">
+                        <i class="bi bi-x-circle" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card border-dark clickable" onclick="navigateToMarkets('suspendu')" style="cursor: pointer;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Suspendus</h6>
+                        <h3 class="mb-0 text-dark" id="suspenduMarkets">0</h3>
+                    </div>
+                    <div class="text-dark">
+                        <i class="bi bi-pause-circle" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card border-danger clickable" onclick="navigateToRisks()" style="cursor: pointer;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Proches Échéances</h6>
+                        <h3 class="mb-0 text-danger" id="nearDeadlineMarkets">0</h3>
+                    </div>
+                    <div class="text-danger">
+                        <i class="bi bi-clock" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card border-primary clickable" onclick="navigateToCommissions()" style="cursor: pointer;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Alertes Critiques</h6>
+                        <h3 class="mb-0 text-primary" id="criticalAlerts">0</h3>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-exclamation-octagon" style="font-size: 2rem;"></i>
                     </div>
                 </div>
             </div>
@@ -151,7 +267,7 @@
 
 <!-- Graphiques -->
 <div class="row mb-4">
-    <div class="col-lg-6 mb-4">
+    <div class="col-lg-4 mb-4">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Marchés par Statut</h5>
@@ -167,7 +283,7 @@
         </div>
     </div>
     
-    <div class="col-lg-6 mb-4">
+    <div class="col-lg-4 mb-4">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Marchés par Type</h5>
@@ -178,6 +294,54 @@
                     <i class="bi bi-bar-chart text-muted" style="font-size: 3rem;"></i>
                     <p class="text-muted mt-2">Aucun marché à afficher</p>
                     <a href="/markets/new" class="btn btn-sm btn-primary">Créer un marché</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Marchés par Procédure</h5>
+            </div>
+            <div class="card-body position-relative" style="min-height: 300px;">
+                <canvas id="procedureChart"></canvas>
+                <div id="procedureChartEmpty" class="position-absolute top-50 start-50 translate-middle text-center d-none">
+                    <i class="bi bi-bar-chart text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2">Aucun marché à afficher</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques supplémentaires -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Répartition par Service</h5>
+            </div>
+            <div class="card-body position-relative" style="min-height: 300px;">
+                <canvas id="serviceChart"></canvas>
+                <div id="serviceChartEmpty" class="position-absolute top-50 start-50 translate-middle text-center d-none">
+                    <i class="bi bi-bar-chart text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2">Aucun marché à afficher</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Évolution Mensuelle</h5>
+            </div>
+            <div class="card-body position-relative" style="min-height: 300px;">
+                <canvas id="timelineChart"></canvas>
+                <div id="timelineChartEmpty" class="position-absolute top-50 start-50 translate-middle text-center d-none">
+                    <i class="bi bi-line-chart text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2">Aucune donnée à afficher</p>
                 </div>
             </div>
         </div>
@@ -317,6 +481,9 @@
 <script>
 let statusChart = null;
 let typeChart = null;
+let procedureChart = null;
+let serviceChart = null;
+let timelineChart = null;
 
 // Helper function to get authentication token
 function getAuthToken() {
@@ -397,8 +564,88 @@ function showNotification(message, type) {
     }, 5000);
 }
 
-function exportDashboard() {
-    showNotification('Export en cours de développement', 'info');
+function exportDashboardExcel() {
+    window.location.href = '/api/exports/dashboard/excel';
+}
+
+function exportDashboardPDF() {
+    window.location.href = '/api/exports/dashboard/pdf';
+}
+
+async function loadAdditionalMetrics() {
+    try {
+        // Charger les métriques de risque
+        const riskResponse = await authenticatedFetch('/api/dashboard/risk-metrics');
+        if (riskResponse.ok) {
+            const riskData = await riskResponse.json();
+            document.getElementById('criticalAlerts').textContent = riskData.critical_alerts ?? 0;
+        }
+        
+        // Charger les métriques de documents et alertes
+        const docAlertResponse = await authenticatedFetch('/api/dashboard/document-alert-metrics');
+        if (docAlertResponse.ok) {
+            const docAlertData = await docAlertResponse.json();
+            // Mettre à jour si nécessaire
+        }
+    } catch (error) {
+        console.error('Erreur métriques supplémentaires:', error);
+    }
+}
+
+function navigateToMarkets(status) {
+    const url = status ? `/markets?status=${status}` : '/markets';
+    window.location.href = url;
+}
+
+function navigateToRisks() {
+    window.location.href = '/markets?status=en_retard';
+}
+
+function navigateToCommissions() {
+    window.location.href = '/commission';
+}
+
+function applyFilters() {
+    const year = document.getElementById('filterYear').value;
+    const service = document.getElementById('filterService').value;
+    const procedure = document.getElementById('filterProcedure').value;
+    const type = document.getElementById('filterType').value;
+    const status = document.getElementById('filterStatus').value;
+    
+    const params = new URLSearchParams();
+    if (year) params.append('year', year);
+    if (service) params.append('service', service);
+    if (procedure) params.append('procedure', procedure);
+    if (type) params.append('type', type);
+    if (status) params.append('status', status);
+    
+    // Recharger les données avec les filtres
+    loadDashboardData();
+}
+
+function resetFilters() {
+    document.getElementById('filterYear').value = '';
+    document.getElementById('filterService').value = '';
+    document.getElementById('filterProcedure').value = '';
+    document.getElementById('filterType').value = '';
+    document.getElementById('filterStatus').value = '';
+    
+    loadDashboardData();
+}
+
+async function refreshDashboard() {
+    const btn = document.querySelector('button[onclick="refreshDashboard()"]');
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualisation...';
+        btn.disabled = true;
+    }
+    
+    await loadDashboardData();
+    
+    if (btn) {
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualiser';
+        btn.disabled = false;
+    }
 }
 
 async function loadDashboardData() {
@@ -427,6 +674,9 @@ async function loadDashboardData() {
         document.getElementById('enCoursMarkets').textContent = stats.markets.en_cours ?? 0;
         document.getElementById('enRetardMarkets').textContent = stats.markets.en_retard ?? 0;
         document.getElementById('termineMarkets').textContent = stats.markets.termine ?? 0;
+        document.getElementById('annuleMarkets').textContent = stats.markets.annule ?? 0;
+        document.getElementById('suspenduMarkets').textContent = stats.markets.suspendu ?? 0;
+        document.getElementById('nearDeadlineMarkets').textContent = stats.deadlines?.near_deadline ?? 0;
         
         // Montants
         document.getElementById('totalEstimated').textContent = formatAmount(stats.amounts?.total_estimated);
@@ -455,6 +705,9 @@ async function loadDashboardData() {
             planningEmptyActions.style.display = (stats.planning?.total ?? 0) > 0 ? 'none' : 'block';
         }
         
+        // Charger les métriques supplémentaires
+        await loadAdditionalMetrics();
+        
         // 2. Charger les graphiques (avec gestion d'erreur séparée)
         await loadCharts();
         
@@ -470,23 +723,27 @@ async function loadDashboardData() {
 
 async function loadCharts() {
     try {
-        const [statusResponse, typeResponse] = await Promise.all([
+        const [statusResponse, typeResponse, procedureResponse, serviceResponse] = await Promise.all([
             authenticatedFetch('/api/dashboard/markets-by-status'),
-            authenticatedFetch('/api/dashboard/markets-by-type')
+            authenticatedFetch('/api/dashboard/markets-by-type'),
+            authenticatedFetch('/api/dashboard/markets-by-procedure'),
+            authenticatedFetch('/api/dashboard/markets-by-service')
         ]);
-        
-        if (!statusResponse.ok || !typeResponse.ok) {
-            throw new Error('Erreur API graphiques');
-        }
         
         const statusData = await statusResponse.json();
         const typeData = await typeResponse.json();
+        const procedureData = await procedureResponse.json();
+        const serviceData = await serviceResponse.json();
         
         // Vérifier si données vides
         const statusValues = Object.values(statusData || {});
         const typeValues = Object.values(typeData || {});
+        const procedureValues = Object.values(procedureData || {});
+        const serviceValues = Object.values(serviceData || {});
         const statusTotal = statusValues.reduce((a, b) => a + (b || 0), 0);
         const typeTotal = typeValues.reduce((a, b) => a + (b || 0), 0);
+        const procedureTotal = procedureValues.reduce((a, b) => a + (b || 0), 0);
+        const serviceTotal = serviceValues.reduce((a, b) => a + (b || 0), 0);
         
         // Graphique statut
         const statusCanvas = document.getElementById('statusChart');
@@ -512,9 +769,35 @@ async function loadCharts() {
             createTypeChart(typeData);
         }
         
+        // Graphique procédure
+        const procedureCanvas = document.getElementById('procedureChart');
+        const procedureEmpty = document.getElementById('procedureChartEmpty');
+        if (procedureTotal === 0) {
+            if (procedureCanvas) procedureCanvas.style.display = 'none';
+            if (procedureEmpty) procedureEmpty.classList.remove('d-none');
+        } else {
+            if (procedureCanvas) procedureCanvas.style.display = 'block';
+            if (procedureEmpty) procedureEmpty.classList.add('d-none');
+            createProcedureChart(procedureData);
+        }
+        
+        // Graphique service
+        const serviceCanvas = document.getElementById('serviceChart');
+        const serviceEmpty = document.getElementById('serviceChartEmpty');
+        if (serviceTotal === 0) {
+            if (serviceCanvas) serviceCanvas.style.display = 'none';
+            if (serviceEmpty) serviceEmpty.classList.remove('d-none');
+        } else {
+            if (serviceCanvas) serviceCanvas.style.display = 'block';
+            if (serviceEmpty) serviceEmpty.classList.add('d-none');
+            createServiceChart(serviceData);
+        }
+        
+        // Charger timeline
+        await loadTimelineChart();
+        
     } catch (error) {
         console.error('Erreur graphiques:', error);
-        // Ne pas bloquer le reste du dashboard
     }
 }
 
@@ -594,6 +877,150 @@ function createTypeChart(data) {
             }
         }
     });
+}
+
+function createProcedureChart(data) {
+    const canvas = document.getElementById('procedureChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    if (procedureChart) {
+        procedureChart.destroy();
+        procedureChart = null;
+    }
+    
+    const labels = Object.keys(data || {}).map(key => key.replace('_', ' ').toUpperCase());
+    const values = Object.values(data || {});
+    const total = values.reduce((a, b) => a + (b || 0), 0);
+    
+    if (total === 0) return;
+    
+    procedureChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+}
+
+function createServiceChart(data) {
+    const canvas = document.getElementById('serviceChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    if (serviceChart) {
+        serviceChart.destroy();
+        serviceChart = null;
+    }
+    
+    const labels = Object.keys(data || {});
+    const values = Object.values(data || {});
+    const total = values.reduce((a, b) => a + (b || 0), 0);
+    
+    if (total === 0) return;
+    
+    serviceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Nombre de marchés',
+                data: values,
+                backgroundColor: '#198754'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                x: { ticks: { maxRotation: 45, minRotation: 45 } }
+            }
+        }
+    });
+}
+
+async function loadTimelineChart() {
+    try {
+        const response = await authenticatedFetch('/api/dashboard/monthly-statistics?months=12');
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const monthlyData = data.monthly_data || [];
+        
+        const canvas = document.getElementById('timelineChart');
+        const empty = document.getElementById('timelineChartEmpty');
+        
+        if (!monthlyData || monthlyData.length === 0) {
+            if (canvas) canvas.style.display = 'none';
+            if (empty) empty.classList.remove('d-none');
+            return;
+        }
+        
+        if (canvas) canvas.style.display = 'block';
+        if (empty) empty.classList.add('d-none');
+        
+        if (timelineChart) {
+            timelineChart.destroy();
+            timelineChart = null;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        const labels = monthlyData.map(d => d.month);
+        const createdData = monthlyData.map(d => d.markets_created);
+        const completedData = monthlyData.map(d => d.markets_completed);
+        
+        timelineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Créés',
+                        data: createdData,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Terminés',
+                        data: completedData,
+                        borderColor: '#198754',
+                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur timeline:', error);
+    }
 }
 
 async function loadRecentMarkets() {

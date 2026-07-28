@@ -294,3 +294,89 @@ def export_companies_to_excel(companies: List, filepath: str):
     
     # Sauvegarder le fichier
     wb.save(filepath)
+
+
+def export_dashboard_to_excel(stats: dict, filepath: str):
+    """
+    Exporte les statistiques du dashboard vers un fichier Excel
+    
+    Args:
+        stats: Dictionnaire des statistiques du dashboard
+        filepath: Chemin du fichier de sortie
+    """
+    wb = Workbook()
+    
+    # Feuille Statistiques Marchés
+    ws1 = wb.active
+    ws1.title = "Statistiques Marchés"
+    
+    headers1 = ["Métrique", "Valeur"]
+    create_styled_header(ws1, headers1)
+    
+    row_num = 2
+    market_stats = stats.get('markets', {})
+    ws1.cell(row=row_num, column=1, value="Total Marchés")
+    ws1.cell(row=row_num, column=2, value=market_stats.get('total', 0))
+    row_num += 1
+    ws1.cell(row=row_num, column=1, value="En Cours")
+    ws1.cell(row=row_num, column=2, value=market_stats.get('en_cours', 0))
+    row_num += 1
+    ws1.cell(row=row_num, column=1, value="Terminés")
+    ws1.cell(row=row_num, column=2, value=market_stats.get('termine', 0))
+    row_num += 1
+    ws1.cell(row=row_num, column=1, value="En Retard")
+    ws1.cell(row=row_num, column=2, value=market_stats.get('en_retard', 0))
+    row_num += 1
+    ws1.cell(row=row_num, column=1, value="En Attente")
+    ws1.cell(row=row_num, column=2, value=market_stats.get('en_attente', 0))
+    row_num += 1
+    ws1.cell(row=row_num, column=1, value="Annulés")
+    ws1.cell(row=row_num, column=2, value=market_stats.get('annule', 0))
+    row_num += 1
+    ws1.cell(row=row_num, column=1, value="Suspendus")
+    ws1.cell(row=row_num, column=2, value=market_stats.get('suspendu', 0))
+    
+    # Feuille Montants
+    ws2 = wb.create_sheet("Montants")
+    create_styled_header(ws2, headers1)
+    
+    row_num = 2
+    amounts = stats.get('amounts', {})
+    ws2.cell(row=row_num, column=1, value="Montant Estimé Total")
+    ws2.cell(row=row_num, column=2, value=amounts.get('total_estimated', 0))
+    row_num += 1
+    ws2.cell(row=row_num, column=1, value="Montant Définitif Total")
+    ws2.cell(row=row_num, column=2, value=amounts.get('total_definitive', 0))
+    row_num += 1
+    ws2.cell(row=row_num, column=1, value="Montant Attribué")
+    ws2.cell(row=row_num, column=2, value=amounts.get('total_attributed', 0))
+    row_num += 1
+    ws2.cell(row=row_num, column=1, value="Montant Payé")
+    ws2.cell(row=row_num, column=2, value=amounts.get('total_paid', 0))
+    row_num += 1
+    ws2.cell(row=row_num, column=1, value="Budget Restant")
+    ws2.cell(row=row_num, column=2, value=amounts.get('remaining', 0))
+    row_num += 1
+    ws2.cell(row=row_num, column=1, value="Écart Estimation/Attribution")
+    ws2.cell(row=row_num, column=2, value=amounts.get('variance', 0))
+    
+    # Feuille Planification
+    ws3 = wb.create_sheet("Planification")
+    create_styled_header(ws3, headers1)
+    
+    row_num = 2
+    planning = stats.get('planning', {})
+    ws3.cell(row=row_num, column=1, value="Total Planifications")
+    ws3.cell(row=row_num, column=2, value=planning.get('total', 0))
+    row_num += 1
+    ws3.cell(row=row_num, column=1, value="Budget Planifié")
+    ws3.cell(row=row_num, column=2, value=planning.get('budget', 0))
+    row_num += 1
+    ws3.cell(row=row_num, column=1, value="Validées")
+    ws3.cell(row=row_num, column=2, value=planning.get('validated', 0))
+    row_num += 1
+    ws3.cell(row=row_num, column=1, value="Programmées")
+    ws3.cell(row=row_num, column=2, value=planning.get('programmed', 0))
+    
+    # Sauvegarder le fichier
+    wb.save(filepath)
