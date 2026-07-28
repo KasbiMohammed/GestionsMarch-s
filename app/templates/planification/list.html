@@ -7,13 +7,13 @@
     <h1 class="h2">Planification des Marchés</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="exportExcel()">
-            <i class="bi bi-file-earmark-excel"></i> Export Excel
+            <i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Export Excel
         </button>
         <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="exportPDF()">
-            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Export PDF
         </button>
         <button type="button" class="btn btn-sm btn-primary" onclick="showCreateModal()">
-            <i class="bi bi-plus-circle"></i> Nouvelle Planification
+            <i class="bi bi-plus-circle" aria-hidden="true"></i> Nouvelle Planification
         </button>
     </div>
 </div>
@@ -105,12 +105,12 @@
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="button" class="btn btn-primary w-100" onclick="applyFilters()">
-                    <i class="bi bi-filter"></i> Filtrer
+                    <i class="bi bi-filter" aria-hidden="true"></i> Filtrer
                 </button>
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
-                    <i class="bi bi-x-circle"></i> Réinitialiser
+                    <i class="bi bi-x-circle" aria-hidden="true"></i> Réinitialiser
                 </button>
             </div>
         </div>
@@ -128,7 +128,7 @@
                         <h3 class="mb-0" id="totalCount">-</h3>
                     </div>
                     <div class="text-primary">
-                        <i class="bi bi-calendar-check" style="font-size: 2rem;"></i>
+                        <i class="bi bi-calendar-check" style="font-size: 2rem;" aria-hidden="true"></i>
                     </div>
                 </div>
             </div>
@@ -143,7 +143,7 @@
                         <h3 class="mb-0" id="totalBudget">-</h3>
                     </div>
                     <div class="text-success">
-                        <i class="bi bi-currency-euro" style="font-size: 2rem;"></i>
+                        <i class="bi bi-currency-euro" style="font-size: 2rem;" aria-hidden="true"></i>
                     </div>
                 </div>
             </div>
@@ -158,7 +158,7 @@
                         <h3 class="mb-0" id="validatedCount">-</h3>
                     </div>
                     <div class="text-warning">
-                        <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                        <i class="bi bi-check-circle" style="font-size: 2rem;" aria-hidden="true"></i>
                     </div>
                 </div>
             </div>
@@ -173,7 +173,7 @@
                         <h3 class="mb-0" id="programmedCount">-</h3>
                     </div>
                     <div class="text-info">
-                        <i class="bi bi-calendar-event" style="font-size: 2rem;"></i>
+                        <i class="bi bi-calendar-event" style="font-size: 2rem;" aria-hidden="true"></i>
                     </div>
                 </div>
             </div>
@@ -212,7 +212,7 @@
                 </tbody>
             </table>
         </div>
-        
+
         <!-- Pagination -->
         <nav aria-label="Pagination" id="paginationNav">
             <ul class="pagination justify-content-center" id="pagination">
@@ -222,17 +222,17 @@
 </div>
 
 <!-- Modal Création/Modification -->
-<div class="modal fade" id="planningModal" tabindex="-1">
+<div class="modal fade" id="planningModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalTitle">Nouvelle Planification</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
             <div class="modal-body">
-                <form id="planningForm">
+                <form id="planningForm" novalidate>
                     <input type="hidden" id="planningId">
-                    
+
                     <!-- Section Informations générales -->
                     <h6 class="mb-3 text-primary">Informations générales</h6>
                     <div class="row g-3 mb-4">
@@ -240,8 +240,8 @@
                             <label class="form-label">Numéro de planification *</label>
                             <div class="input-group">
                                 <input type="text" class="form-control" id="planningNumber" required>
-                                <button type="button" class="btn btn-outline-secondary" onclick="generateNumber()">
-                                    <i class="bi bi-arrow-clockwise"></i>
+                                <button type="button" class="btn btn-outline-secondary" onclick="generateNumber()" title="Générer un numéro">
+                                    <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                                 </button>
                             </div>
                         </div>
@@ -258,7 +258,7 @@
                             <textarea class="form-control" id="description" rows="3"></textarea>
                         </div>
                     </div>
-                    
+
                     <!-- Section Type et procédure -->
                     <h6 class="mb-3 text-primary">Type et procédure</h6>
                     <div class="row g-3 mb-4">
@@ -285,7 +285,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <!-- Section Budget et financement -->
                     <h6 class="mb-3 text-primary">Budget et financement</h6>
                     <div class="row g-3 mb-4">
@@ -298,7 +298,7 @@
                             <input type="text" class="form-control" id="fundingSource" maxlength="200">
                         </div>
                     </div>
-                    
+
                     <!-- Section Service et responsable -->
                     <h6 class="mb-3 text-primary">Service et responsable</h6>
                     <div class="row g-3 mb-4">
@@ -323,7 +323,7 @@
                             <input type="text" class="form-control" id="responsibleName" maxlength="200">
                         </div>
                     </div>
-                    
+
                     <!-- Section Priorité et statut -->
                     <h6 class="mb-3 text-primary">Priorité et statut</h6>
                     <div class="row g-3 mb-4">
@@ -347,7 +347,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <!-- Section Dates prévisionnelles -->
                     <h6 class="mb-3 text-primary">Dates prévisionnelles</h6>
                     <div class="row g-3 mb-4">
@@ -371,7 +371,6 @@
                             <label class="form-label">Ordre de service</label>
                             <input type="date" class="form-control" id="serviceOrderDate">
                         </div>
-                        <div class="col-md-4"></div>
                         <div class="col-md-4">
                             <label class="form-label">Début</label>
                             <input type="date" class="form-control" id="startDate">
@@ -381,7 +380,7 @@
                             <input type="date" class="form-control" id="endDate">
                         </div>
                     </div>
-                    
+
                     <!-- Section Observations -->
                     <h6 class="mb-3 text-primary">Observations</h6>
                     <div class="mb-4">
@@ -399,20 +398,20 @@
 </div>
 
 <!-- Modal Documents -->
-<div class="modal fade" id="documentsModal" tabindex="-1">
+<div class="modal fade" id="documentsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Documents joints</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
                     <div class="input-group">
-                        <input type="file" class="form-control" id="documentFile">
-                        <input type="text" class="form-control" id="documentName" placeholder="Nom du document">
+                        <input type="file" class="form-control" id="documentFile" aria-label="Fichier">
+                        <input type="text" class="form-control" id="documentName" placeholder="Nom du document" aria-label="Nom du document">
                         <button type="button" class="btn btn-primary" onclick="uploadDocument()">
-                            <i class="bi bi-upload"></i> Ajouter
+                            <i class="bi bi-upload" aria-hidden="true"></i> Ajouter
                         </button>
                     </div>
                 </div>
@@ -432,17 +431,20 @@
                     </table>
                 </div>
             </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Modal Confirmation suppression -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Confirmation de suppression</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
             <div class="modal-body">
                 <p>Êtes-vous sûr de vouloir supprimer cette planification ?</p>
@@ -465,15 +467,26 @@ let totalPages = 1;
 let currentDeleteId = null;
 let currentPlanningId = null;
 
-// Helper function to get authentication token
+// ─────────────────────────────────────────
+// Utilitaires de sécurité
+// ─────────────────────────────────────────
+function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ─────────────────────────────────────────
+// Authentification
+// ─────────────────────────────────────────
 function getAuthToken() {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; access_token=`);
+    const value = '; ' + document.cookie;
+    const parts = value.split('; access_token=');
     if (parts.length === 2) return parts.pop().split(';').shift();
     return null;
 }
 
-// Helper function to make authenticated fetch calls
 async function authenticatedFetch(url, options = {}) {
     const token = getAuthToken();
     const headers = {
@@ -481,12 +494,24 @@ async function authenticatedFetch(url, options = {}) {
         ...options.headers
     };
     if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers['Authorization'] = 'Bearer ' + token;
     }
-    return fetch(url, { ...options, headers });
+    try {
+        const response = await fetch(url, { ...options, headers });
+        if (response.status === 401) {
+            window.location.href = '/';
+            return Promise.reject(new Error('Session expirée'));
+        }
+        return response;
+    } catch (err) {
+        showNotification('Erreur réseau : ' + err.message, 'danger');
+        throw err;
+    }
 }
 
-// Charger les données au démarrage
+// ─────────────────────────────────────────
+// Initialisation
+// ─────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
     loadServices();
     loadUsers();
@@ -494,47 +519,79 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStatistics();
 });
 
-// Charger les services
+// ─────────────────────────────────────────
+// Chargement des données référentielles
+// ─────────────────────────────────────────
 async function loadServices() {
     try {
         const response = await authenticatedFetch('/api/market-planning/services');
+        if (!response.ok) return;
+
         const services = await response.json();
-        
         const serviceFilter = document.getElementById('serviceFilter');
         const requestingServiceId = document.getElementById('requestingServiceId');
-        
+
+        if (!serviceFilter || !requestingServiceId) return;
+
+        // Vider et conserver l'option par défaut
+        serviceFilter.innerHTML = '<option value="">Tous</option>';
+        requestingServiceId.innerHTML = '<option value="">Sélectionner...</option>';
+
+        const fragFilter = document.createDocumentFragment();
+        const fragModal = document.createDocumentFragment();
+
         services.forEach(service => {
-            serviceFilter.innerHTML += `<option value="${service.id}">${service.name}</option>`;
-            requestingServiceId.innerHTML += `<option value="${service.id}">${service.name}</option>`;
+            const opt1 = document.createElement('option');
+            opt1.value = service.id;
+            opt1.textContent = service.name;
+            fragFilter.appendChild(opt1);
+
+            const opt2 = document.createElement('option');
+            opt2.value = service.id;
+            opt2.textContent = service.name;
+            fragModal.appendChild(opt2);
         });
+
+        serviceFilter.appendChild(fragFilter);
+        requestingServiceId.appendChild(fragModal);
     } catch (error) {
-        console.error('Erreur lors du chargement des services:', error);
+        console.error('Erreur services:', error);
     }
 }
 
-// Charger les utilisateurs
 async function loadUsers() {
     try {
         const response = await authenticatedFetch('/api/users');
+        if (!response.ok) return;
+
         const users = await response.json();
-        
         const responsibleId = document.getElementById('responsibleId');
-        
+        if (!responsibleId) return;
+
+        responsibleId.innerHTML = '<option value="">Sélectionner...</option>';
+        const frag = document.createDocumentFragment();
+
         users.forEach(user => {
-            responsibleId.innerHTML += `<option value="${user.id}">${user.full_name}</option>`;
+            const opt = document.createElement('option');
+            opt.value = user.id;
+            opt.textContent = user.full_name || user.email || 'Utilisateur #' + user.id;
+            frag.appendChild(opt);
         });
+
+        responsibleId.appendChild(frag);
     } catch (error) {
-        console.error('Erreur lors du chargement des utilisateurs:', error);
+        console.error('Erreur utilisateurs:', error);
     }
 }
 
-// Charger les planifications
+// ─────────────────────────────────────────
+// Planifications
+// ─────────────────────────────────────────
 async function loadPlannings() {
-    
     try {
         const params = new URLSearchParams({
-            skip: (currentPage - 1) * pageSize,
-            limit: pageSize,
+            skip: String((currentPage - 1) * pageSize),
+            limit: String(pageSize),
             search: document.getElementById('searchInput').value,
             fiscal_year: document.getElementById('fiscalYearFilter').value,
             project_type: document.getElementById('projectTypeFilter').value,
@@ -545,96 +602,143 @@ async function loadPlannings() {
             sort_by: document.getElementById('sortBy').value,
             sort_order: document.getElementById('sortOrder').value
         });
-        
-        const response = await authenticatedFetch(`/api/market-planning/?${params}`);
+
+        const response = await authenticatedFetch('/api/market-planning/?' + params);
+        if (!response.ok) {
+            showNotification('Erreur lors du chargement des planifications', 'danger');
+            return;
+        }
+
         const data = await response.json();
-        
         displayPlannings(data.items);
         updatePagination(data.total, data.page, data.page_size, data.total_pages);
     } catch (error) {
-        console.error('Erreur lors du chargement des planifications:', error);
-        showNotification('Erreur lors du chargement des données', 'danger');
+        console.error('Erreur planifications:', error);
     }
 }
 
-// Afficher les planifications
 function displayPlannings(plannings) {
     const tbody = document.getElementById('planningsTable');
     tbody.innerHTML = '';
-    
-    if (plannings.length === 0) {
+
+    if (!plannings || plannings.length === 0) {
         tbody.innerHTML = '<tr><td colspan="11" class="text-center">Aucune planification trouvée</td></tr>';
         return;
     }
-    
+
+    const frag = document.createDocumentFragment();
+
     plannings.forEach(planning => {
         const row = document.createElement('tr');
+
+        const title = planning.title || '';
+        const truncatedTitle = title.length > 50 ? escapeHtml(title.substring(0, 50)) + '…' : escapeHtml(title);
+
         row.innerHTML = `
-            <td><strong>${planning.planning_number}</strong></td>
-            <td>${planning.fiscal_year}</td>
-            <td>${planning.title.substring(0, 50)}${planning.title.length > 50 ? '...' : ''}</td>
-            <td><span class="badge bg-secondary">${getProjectTypeLabel(planning.project_type)}</span></td>
-            <td><span class="badge bg-info">${getProcedureTypeLabel(planning.procedure_type)}</span></td>
-            <td>${formatAmount(planning.estimated_budget)}</td>
-            <td>${planning.requesting_service_name || '-'}</td>
-            <td><span class="badge bg-${getPriorityColor(planning.priority)}">${getPriorityLabel(planning.priority)}</span></td>
-            <td><span class="badge bg-${getStatusColor(planning.status)}">${getStatusLabel(planning.status)}</span></td>
-            <td>${formatDate(planning.launch_date)}</td>
+            <td><strong>${escapeHtml(planning.planning_number)}</strong></td>
+            <td>${escapeHtml(planning.fiscal_year)}</td>
+            <td>${truncatedTitle}</td>
+            <td><span class="badge bg-secondary">${escapeHtml(getProjectTypeLabel(planning.project_type))}</span></td>
+            <td><span class="badge bg-info">${escapeHtml(getProcedureTypeLabel(planning.procedure_type))}</span></td>
+            <td>${escapeHtml(formatAmount(planning.estimated_budget))}</td>
+            <td>${escapeHtml(planning.requesting_service_name || '-')}</td>
+            <td><span class="badge bg-${getPriorityColor(planning.priority)}">${escapeHtml(getPriorityLabel(planning.priority))}</span></td>
+            <td><span class="badge bg-${getStatusColor(planning.status)}">${escapeHtml(getStatusLabel(planning.status))}</span></td>
+            <td>${escapeHtml(formatDate(planning.launch_date))}</td>
             <td>
                 <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary" onclick="viewPlanning(${planning.id})" title="Voir">
-                        <i class="bi bi-eye"></i>
+                    <button class="btn btn-outline-primary" onclick="viewPlanning(${planning.id})" title="Voir" aria-label="Voir la planification">
+                        <i class="bi bi-eye" aria-hidden="true"></i>
                     </button>
-                    <button class="btn btn-outline-secondary" onclick="editPlanning(${planning.id})" title="Modifier">
-                        <i class="bi bi-pencil"></i>
+                    <button class="btn btn-outline-secondary" onclick="editPlanning(${planning.id})" title="Modifier" aria-label="Modifier la planification">
+                        <i class="bi bi-pencil" aria-hidden="true"></i>
                     </button>
-                    <button class="btn btn-outline-info" onclick="showDocuments(${planning.id})" title="Documents">
-                        <i class="bi bi-file-earmark"></i>
+                    <button class="btn btn-outline-info" onclick="showDocuments(${planning.id})" title="Documents" aria-label="Voir les documents">
+                        <i class="bi bi-file-earmark" aria-hidden="true"></i>
                     </button>
-                    <button class="btn btn-outline-danger" onclick="deletePlanning(${planning.id})" title="Supprimer">
-                        <i class="bi bi-trash"></i>
+                    <button class="btn btn-outline-danger" onclick="deletePlanning(${planning.id})" title="Supprimer" aria-label="Supprimer la planification">
+                        <i class="bi bi-trash" aria-hidden="true"></i>
                     </button>
                 </div>
             </td>
         `;
-        tbody.appendChild(row);
+        frag.appendChild(row);
     });
+
+    tbody.appendChild(frag);
 }
 
-// Mettre à jour la pagination
-function updatePagination(total, page, pageSize, totalPages) {
+// ─────────────────────────────────────────
+// Pagination
+// ─────────────────────────────────────────
+function updatePagination(total, page, pageSizeVal, totalPagesVal) {
     currentPage = page;
-    this.totalPages = totalPages;
-    
+    totalPages = totalPagesVal;
+
     const pagination = document.getElementById('pagination');
     pagination.innerHTML = '';
-    
-    // Bouton précédent
-    pagination.innerHTML += `
-        <li class="page-item ${page === 1 ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="goToPage(${page - 1})">Précédent</a>
-        </li>
-    `;
-    
+
+    const frag = document.createDocumentFragment();
+
+    // Précédent
+    const prevLi = document.createElement('li');
+    prevLi.className = 'page-item' + (page === 1 ? ' disabled' : '');
+    const prevLink = document.createElement('a');
+    prevLink.className = 'page-link';
+    prevLink.href = '#';
+    prevLink.textContent = 'Précédent';
+    if (page > 1) {
+        prevLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            goToPage(page - 1);
+        });
+    }
+    prevLi.appendChild(prevLink);
+    frag.appendChild(prevLi);
+
     // Pages
-    for (let i = 1; i <= totalPages; i++) {
-        if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
-            pagination.innerHTML += `
-                <li class="page-item ${i === page ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>
-                </li>
-            `;
+    for (let i = 1; i <= totalPagesVal; i++) {
+        if (i === 1 || i === totalPagesVal || (i >= page - 2 && i <= page + 2)) {
+            const li = document.createElement('li');
+            li.className = 'page-item' + (i === page ? ' active' : '');
+            const link = document.createElement('a');
+            link.className = 'page-link';
+            link.href = '#';
+            link.textContent = String(i);
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                goToPage(i);
+            });
+            li.appendChild(link);
+            frag.appendChild(li);
         } else if (i === page - 3 || i === page + 3) {
-            pagination.innerHTML += '<li class="page-item disabled"><a class="page-link">...</a></li>';
+            const li = document.createElement('li');
+            li.className = 'page-item disabled';
+            const span = document.createElement('span');
+            span.className = 'page-link';
+            span.textContent = '…';
+            li.appendChild(span);
+            frag.appendChild(li);
         }
     }
-    
-    // Bouton suivant
-    pagination.innerHTML += `
-        <li class="page-item ${page === totalPages ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="goToPage(${page + 1})">Suivant</a>
-        </li>
-    `;
+
+    // Suivant
+    const nextLi = document.createElement('li');
+    nextLi.className = 'page-item' + (page === totalPagesVal ? ' disabled' : '');
+    const nextLink = document.createElement('a');
+    nextLink.className = 'page-link';
+    nextLink.href = '#';
+    nextLink.textContent = 'Suivant';
+    if (page < totalPagesVal) {
+        nextLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            goToPage(page + 1);
+        });
+    }
+    nextLi.appendChild(nextLink);
+    frag.appendChild(nextLi);
+
+    pagination.appendChild(frag);
 }
 
 function goToPage(page) {
@@ -643,28 +747,32 @@ function goToPage(page) {
     loadPlannings();
 }
 
-// Charger les statistiques
+// ─────────────────────────────────────────
+// Statistiques
+// ─────────────────────────────────────────
 async function loadStatistics() {
     try {
         const response = await authenticatedFetch('/api/market-planning/statistics');
+        if (!response.ok) return;
+
         const stats = await response.json();
-        
-        document.getElementById('totalCount').textContent = stats.total_count;
+        document.getElementById('totalCount').textContent = stats.total_count ?? '-';
         document.getElementById('totalBudget').textContent = formatAmount(stats.total_budget);
-        document.getElementById('validatedCount').textContent = stats.by_status.validee || 0;
-        document.getElementById('programmedCount').textContent = stats.by_status.programmee || 0;
+        document.getElementById('validatedCount').textContent = stats.by_status?.validee ?? 0;
+        document.getElementById('programmedCount').textContent = stats.by_status?.programmee ?? 0;
     } catch (error) {
-        console.error('Erreur lors du chargement des statistiques:', error);
+        console.error('Erreur statistiques:', error);
     }
 }
 
-// Appliquer les filtres
+// ─────────────────────────────────────────
+// Filtres
+// ─────────────────────────────────────────
 function applyFilters() {
     currentPage = 1;
     loadPlannings();
 }
 
-// Réinitialiser les filtres
 function resetFilters() {
     document.getElementById('searchInput').value = '';
     document.getElementById('fiscalYearFilter').value = '';
@@ -679,53 +787,54 @@ function resetFilters() {
     loadPlannings();
 }
 
-// Afficher le modal de création
+// ─────────────────────────────────────────
+// Création / Modification
+// ─────────────────────────────────────────
 function showCreateModal() {
     document.getElementById('modalTitle').textContent = 'Nouvelle Planification';
     document.getElementById('planningForm').reset();
     document.getElementById('planningId').value = '';
     document.getElementById('fiscalYear').value = new Date().getFullYear();
     generateNumber();
-    new bootstrap.Modal(document.getElementById('planningModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('planningModal')).show();
 }
 
-// Générer un numéro de planification
 async function generateNumber() {
     const fiscalYear = document.getElementById('fiscalYear').value;
     if (!fiscalYear) return;
-    
+
     try {
-        const response = await authenticatedFetch(`/api/market-planning/generate-number?fiscal_year=${fiscalYear}`);
+        const response = await authenticatedFetch('/api/market-planning/generate-number?fiscal_year=' + fiscalYear);
+        if (!response.ok) return;
         const data = await response.json();
         document.getElementById('planningNumber').value = data.planning_number;
     } catch (error) {
-        console.error('Erreur lors de la génération du numéro:', error);
+        console.error('Erreur génération numéro:', error);
     }
 }
 
-// Enregistrer une planification
 async function savePlanning() {
     const form = document.getElementById('planningForm');
     if (!form.checkValidity()) {
         form.reportValidity();
         return;
     }
-    
+
     const planningId = document.getElementById('planningId').value;
     const isUpdate = planningId !== '';
-    
+
     const data = {
         planning_number: document.getElementById('planningNumber').value,
-        fiscal_year: parseInt(document.getElementById('fiscalYear').value),
+        fiscal_year: parseInt(document.getElementById('fiscalYear').value, 10),
         title: document.getElementById('title').value,
         description: document.getElementById('description').value,
         project_type: document.getElementById('projectType').value,
         procedure_type: document.getElementById('procedureType').value,
         estimated_budget: parseFloat(document.getElementById('estimatedBudget').value),
         funding_source: document.getElementById('fundingSource').value,
-        requesting_service_id: document.getElementById('requestingServiceId').value ? parseInt(document.getElementById('requestingServiceId').value) : null,
+        requesting_service_id: document.getElementById('requestingServiceId').value ? parseInt(document.getElementById('requestingServiceId').value, 10) : null,
         requesting_service_name: document.getElementById('requestingServiceName').value,
-        responsible_id: document.getElementById('responsibleId').value ? parseInt(document.getElementById('responsibleId').value) : null,
+        responsible_id: document.getElementById('responsibleId').value ? parseInt(document.getElementById('responsibleId').value, 10) : null,
         responsible_name: document.getElementById('responsibleName').value,
         priority: document.getElementById('priority').value,
         status: document.getElementById('status').value,
@@ -738,37 +847,40 @@ async function savePlanning() {
         end_date: document.getElementById('endDate').value || null,
         observations: document.getElementById('observations').value
     };
-    
+
     try {
-        const url = isUpdate ? `/api/market-planning/${planningId}` : '/api/market-planning/';
+        const url = isUpdate ? '/api/market-planning/' + planningId : '/api/market-planning/';
         const method = isUpdate ? 'PUT' : 'POST';
-        
+
         const response = await authenticatedFetch(url, {
             method: method,
             body: JSON.stringify(data)
         });
-        
+
         if (response.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('planningModal')).hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('planningModal')).hide();
             loadPlannings();
             loadStatistics();
             showNotification(isUpdate ? 'Planification modifiée avec succès' : 'Planification créée avec succès', 'success');
         } else {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ detail: 'Erreur lors de l\'enregistrement' }));
             showNotification(error.detail || 'Erreur lors de l\'enregistrement', 'danger');
         }
     } catch (error) {
-        console.error('Erreur lors de l\'enregistrement:', error);
-        showNotification('Erreur lors de l\'enregistrement', 'danger');
+        console.error('Erreur enregistrement:', error);
     }
 }
 
-// Modifier une planification
 async function editPlanning(id) {
     try {
-        const response = await authenticatedFetch(`/api/market-planning/${id}`);
+        const response = await authenticatedFetch('/api/market-planning/' + id);
+        if (!response.ok) {
+            showNotification('Impossible de charger la planification', 'danger');
+            return;
+        }
+
         const planning = await response.json();
-        
+
         document.getElementById('modalTitle').textContent = 'Modifier la Planification';
         document.getElementById('planningId').value = planning.id;
         document.getElementById('planningNumber').value = planning.planning_number;
@@ -785,42 +897,44 @@ async function editPlanning(id) {
         document.getElementById('responsibleName').value = planning.responsible_name || '';
         document.getElementById('priority').value = planning.priority;
         document.getElementById('status').value = planning.status;
-        document.getElementById('launchDate').value = planning.launch_date ? planning.launch_date.split('T')[0] : '';
-        document.getElementById('bidOpeningDate').value = planning.bid_opening_date ? planning.bid_opening_date.split('T')[0] : '';
-        document.getElementById('attributionDate').value = planning.attribution_date ? planning.attribution_date.split('T')[0] : '';
-        document.getElementById('notificationDate').value = planning.notification_date ? planning.notification_date.split('T')[0] : '';
-        document.getElementById('serviceOrderDate').value = planning.service_order_date ? planning.service_order_date.split('T')[0] : '';
-        document.getElementById('startDate').value = planning.start_date ? planning.start_date.split('T')[0] : '';
-        document.getElementById('endDate').value = planning.end_date ? planning.end_date.split('T')[0] : '';
+
+        const toDateInput = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+        document.getElementById('launchDate').value = toDateInput(planning.launch_date);
+        document.getElementById('bidOpeningDate').value = toDateInput(planning.bid_opening_date);
+        document.getElementById('attributionDate').value = toDateInput(planning.attribution_date);
+        document.getElementById('notificationDate').value = toDateInput(planning.notification_date);
+        document.getElementById('serviceOrderDate').value = toDateInput(planning.service_order_date);
+        document.getElementById('startDate').value = toDateInput(planning.start_date);
+        document.getElementById('endDate').value = toDateInput(planning.end_date);
         document.getElementById('observations').value = planning.observations || '';
-        
-        new bootstrap.Modal(document.getElementById('planningModal')).show();
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('planningModal')).show();
     } catch (error) {
-        console.error('Erreur lors du chargement de la planification:', error);
+        console.error('Erreur chargement édition:', error);
         showNotification('Erreur lors du chargement', 'danger');
     }
 }
 
-// Voir une planification
 function viewPlanning(id) {
-    window.location.href = `/planification/${id}`;
+    window.location.href = '/planification/' + id;
 }
 
-// Supprimer une planification
+// ─────────────────────────────────────────
+// Suppression
+// ─────────────────────────────────────────
 function deletePlanning(id) {
     currentDeleteId = id;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
 }
 
-// Confirmer la suppression
 async function confirmDelete() {
     try {
-        const response = await authenticatedFetch(`/api/market-planning/${currentDeleteId}`, {
+        const response = await authenticatedFetch('/api/market-planning/' + currentDeleteId, {
             method: 'DELETE'
         });
-        
+
         if (response.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).hide();
             loadPlannings();
             loadStatistics();
             showNotification('Planification supprimée avec succès', 'success');
@@ -828,67 +942,70 @@ async function confirmDelete() {
             showNotification('Erreur lors de la suppression', 'danger');
         }
     } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-        showNotification('Erreur lors de la suppression', 'danger');
+        console.error('Erreur suppression:', error);
     }
 }
 
-// Afficher les documents
+// ─────────────────────────────────────────
+// Documents
+// ─────────────────────────────────────────
 async function showDocuments(planningId) {
     currentPlanningId = planningId;
     try {
-        const response = await authenticatedFetch(`/api/market-planning/${planningId}`);
+        const response = await authenticatedFetch('/api/market-planning/' + planningId);
+        if (!response.ok) {
+            showNotification('Impossible de charger les documents', 'danger');
+            return;
+        }
         const planning = await response.json();
-        
         displayDocuments(planning.documents || []);
-        new bootstrap.Modal(document.getElementById('documentsModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('documentsModal')).show();
     } catch (error) {
-        console.error('Erreur lors du chargement des documents:', error);
+        console.error('Erreur documents:', error);
     }
 }
 
-// Afficher les documents
 function displayDocuments(documents) {
     const tbody = document.getElementById('documentsTable');
     tbody.innerHTML = '';
-    
-    if (documents.length === 0) {
+
+    if (!documents || documents.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center">Aucun document</td></tr>';
         return;
     }
-    
+
+    const frag = document.createDocumentFragment();
     documents.forEach(doc => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${doc.name}</td>
-            <td>${doc.file_name}</td>
-            <td>${formatFileSize(doc.file_size)}</td>
-            <td>${formatDate(doc.uploaded_at)}</td>
+            <td>${escapeHtml(doc.name)}</td>
+            <td>${escapeHtml(doc.file_name)}</td>
+            <td>${escapeHtml(formatFileSize(doc.file_size))}</td>
+            <td>${escapeHtml(formatDate(doc.uploaded_at))}</td>
             <td>
-                <button class="btn btn-sm btn-outline-primary" onclick="downloadDocument(${doc.id})">
-                    <i class="bi bi-download"></i>
+                <button class="btn btn-sm btn-outline-primary" onclick="downloadDocument(${doc.id})" title="Télécharger" aria-label="Télécharger le document">
+                    <i class="bi bi-download" aria-hidden="true"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteDocument(${doc.id})">
-                    <i class="bi bi-trash"></i>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteDocument(${doc.id})" title="Supprimer" aria-label="Supprimer le document">
+                    <i class="bi bi-trash" aria-hidden="true"></i>
                 </button>
             </td>
         `;
-        tbody.appendChild(row);
+        frag.appendChild(row);
     });
+    tbody.appendChild(frag);
 }
 
-// Télécharger un document
 function downloadDocument(docId) {
-    window.location.href = `/api/market-planning/documents/${docId}/download`;
+    window.location.href = '/api/market-planning/documents/' + docId + '/download';
 }
 
-// Supprimer un document
 async function deleteDocument(docId) {
     try {
-        const response = await authenticatedFetch(`/api/market-planning/documents/${docId}`, {
+        const response = await authenticatedFetch('/api/market-planning/documents/' + docId, {
             method: 'DELETE'
         });
-        
+
         if (response.ok) {
             showDocuments(currentPlanningId);
             showNotification('Document supprimé avec succès', 'success');
@@ -896,36 +1013,39 @@ async function deleteDocument(docId) {
             showNotification('Erreur lors de la suppression', 'danger');
         }
     } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
+        console.error('Erreur suppression document:', error);
     }
 }
 
-// Téléverser un document
 async function uploadDocument() {
     const fileInput = document.getElementById('documentFile');
     const nameInput = document.getElementById('documentName');
-    
-    if (!fileInput.files[0] || !nameInput.value) {
-        showNotification('Veuillez sélectionner un fichier et entrer un nom', 'warning');
+
+    if (!fileInput.files[0]) {
+        showNotification('Veuillez sélectionner un fichier', 'warning');
         return;
     }
-    
+
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
-    formData.append('name', nameInput.value);
-    
+    formData.append('name', nameInput.value || fileInput.files[0].name);
+
     try {
         const token = getAuthToken();
         const headers = {};
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        const response = await fetch(`/api/market-planning/${currentPlanningId}/documents`, {
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        const response = await fetch('/api/market-planning/' + currentPlanningId + '/documents', {
             method: 'POST',
             headers: headers,
             body: formData
         });
-        
+
+        if (response.status === 401) {
+            window.location.href = '/';
+            return;
+        }
+
         if (response.ok) {
             fileInput.value = '';
             nameInput.value = '';
@@ -935,21 +1055,25 @@ async function uploadDocument() {
             showNotification('Erreur lors de l\'ajout du document', 'danger');
         }
     } catch (error) {
-        console.error('Erreur lors de l\'ajout:', error);
+        console.error('Erreur upload:', error);
+        showNotification('Erreur réseau lors de l\'ajout', 'danger');
     }
 }
 
-// Export Excel
+// ─────────────────────────────────────────
+// Exports
+// ─────────────────────────────────────────
 function exportExcel() {
     window.location.href = '/api/exports/market-planning/excel';
 }
 
-// Export PDF
 function exportPDF() {
     window.location.href = '/api/exports/market-planning/pdf';
 }
 
-// Fonctions utilitaires
+// ─────────────────────────────────────────
+// Fonctions utilitaires locales
+// ─────────────────────────────────────────
 function getProjectTypeLabel(type) {
     const labels = {
         'travaux': 'Travaux',
@@ -1015,31 +1139,11 @@ function getStatusColor(status) {
 }
 
 function formatFileSize(bytes) {
-    if (!bytes) return '-';
+    if (bytes == null) return '-';
+    if (bytes === 0) return '0 Octets';
     const sizes = ['Octets', 'Ko', 'Mo', 'Go'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-}
-
-function formatAmount(amount) {
-    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(amount || 0);
-}
-
-function formatDate(date) {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('fr-FR');
-}
-
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
+    return (Math.round(bytes / Math.pow(1024, i) * 100) / 100) + ' ' + sizes[i];
 }
 </script>
 {% endblock %}

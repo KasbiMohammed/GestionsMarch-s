@@ -110,7 +110,7 @@ class Market(Base):
     guarantees = relationship("Guarantee", back_populates="market", cascade="all, delete-orphan")
     penalties = relationship("Penalty", back_populates="market", cascade="all, delete-orphan")
     receptions = relationship("Reception", back_populates="market", cascade="all, delete-orphan")
-    preparation = relationship("MarketPreparation", back_populates="market", uselist=False, cascade="all, delete-orphan")
+    # MarketPreparation is related to MarketPlanning, not directly to Market
     pmmp_publication = relationship("PMMPPublication", back_populates="market", uselist=False, cascade="all, delete-orphan")
     offers = relationship("Offer", back_populates="market", cascade="all, delete-orphan")
     procurement_decision = relationship("ProcurementDecision", back_populates="market", uselist=False, cascade="all, delete-orphan")

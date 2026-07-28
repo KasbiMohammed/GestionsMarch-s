@@ -309,10 +309,14 @@ document.getElementById('planningForm').addEventListener('submit', async functio
     const formData = new FormData(this);
     const data = {};
     formData.forEach((value, key) => {
-        if (value) {
-            data[key] = value;
-        }
+        data[key] = value;
     });
+    
+    // S'assurer que les champs requis sont présents
+    if (!data.project_type) data.project_type = 'travaux';
+    if (!data.procedure_type) data.procedure_type = 'bon_commande';
+    if (!data.priority) data.priority = 'moyenne';
+    if (!data.status) data.status = 'brouillon';
     
     // Conversion des types
     if (data.fiscal_year) data.fiscal_year = parseInt(data.fiscal_year);

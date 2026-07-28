@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Gestion des Marchés Publics{% endblock %}</title>
-    
+    <meta name="description" content="{% block meta_description %}Application de gestion des marchés publics pour les communes territoriales marocaines{% endblock %}">
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
+
     <style>
         :root {
             --primary-color: #0d6efd;
@@ -23,23 +22,23 @@
             --light-color: #f8f9fa;
             --dark-color: #212529;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f5f5f5;
         }
-        
+
         .navbar-brand {
             font-weight: 600;
             font-size: 1.25rem;
         }
-        
+
         .sidebar {
             min-height: calc(100vh - 56px);
             background-color: #fff;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
-        
+
         .sidebar .nav-link {
             color: #495057;
             padding: 0.75rem 1rem;
@@ -47,334 +46,376 @@
             margin-bottom: 0.25rem;
             transition: all 0.2s ease-in-out;
         }
-        
+
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
             background-color: var(--primary-color);
             color: white;
         }
-        
+
         .sidebar .nav-link i {
             margin-right: 0.5rem;
         }
-        
+
         .card {
             border: none;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             margin-bottom: 1rem;
         }
-        
+
         .card-header {
             background-color: #fff;
             border-bottom: 1px solid #dee2e6;
             font-weight: 600;
         }
-        
+
         .stat-card {
             border-left: 4px solid var(--primary-color);
         }
-        
-        .stat-card.success {
-            border-left-color: var(--success-color);
-        }
-        
-        .stat-card.warning {
-            border-left-color: var(--warning-color);
-        }
-        
-        .stat-card.danger {
-            border-left-color: var(--danger-color);
-        }
-        
-        .stat-card.info {
-            border-left-color: var(--info-color);
-        }
-        
+
+        .stat-card.success { border-left-color: var(--success-color); }
+        .stat-card.warning { border-left-color: var(--warning-color); }
+        .stat-card.danger { border-left-color: var(--danger-color); }
+        .stat-card.info { border-left-color: var(--info-color); }
+
         .table-responsive {
             border-radius: 0.375rem;
             overflow: hidden;
         }
-        
+
         .badge-status {
             padding: 0.35em 0.65em;
             font-size: 0.75em;
             font-weight: 600;
         }
-        
+
         .alert-level-green {
             background-color: #d4edda;
             color: #155724;
         }
-        
+
         .alert-level-orange {
             background-color: #fff3cd;
             color: #856404;
         }
-        
+
         .alert-level-red {
             background-color: #f8d7da;
             color: #721c24;
         }
-        
+
         .progress {
             height: 0.5rem;
         }
-        
+
         .btn-action {
             padding: 0.25rem 0.5rem;
             font-size: 0.875rem;
         }
-        
+
         .main-content {
-            padding: 2rem;
+            padding-top: 1.5rem;
+            padding-bottom: 1.5rem;
         }
-        
+
+        /* Conteneur de notifications fixe */
+        #notification-container {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1060;
+            max-width: 350px;
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 min-height: auto;
             }
-            
             .main-content {
-                padding: 1rem;
-            }
-        }
-        
-        .loading-spinner {
-            display: inline-block;
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid currentColor;
-            border-right-color: transparent;
-            border-radius: 50%;
-            animation: spinner-border .75s linear infinite;
-        }
-        
-        @keyframes spinner-border {
-            100% {
-                transform: rotate(360deg);
+                padding-top: 1rem;
+                padding-bottom: 1rem;
             }
         }
     </style>
-    
-  
+
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     {% if user %}
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary" aria-label="Navigation principale">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">
-                <i class="bi bi-building"></i>
+                <i class="bi bi-building" aria-hidden="true"></i>
                 Gestion des Marchés Publics
             </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+
+            <!-- Toggle sidebar sur mobile -->
+            <button class="navbar-toggler d-md-none me-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Basculer le menu latéral">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Basculer la navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="/dashboard">
-                            <i class="bi bi-speedometer2"></i> Tableau de bord
+                            <i class="bi bi-speedometer2" aria-hidden="true"></i> Tableau de bord
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/planification">
-                            <i class="bi bi-calendar-check"></i> Planification
+                            <i class="bi bi-calendar-check" aria-hidden="true"></i> Planification
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/markets">
-                            <i class="bi bi-list-check"></i> Marchés
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/analysis">
-                            <i class="bi bi-graph-up"></i> Analyse PMMP
+                            <i class="bi bi-list-check" aria-hidden="true"></i> Marchés
                         </a>
                     </li>
                 </ul>
-                
+
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i>
-                            {{ user.full_name }}
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle" aria-hidden="true"></i>
+                            {{ user.full_name or 'Utilisateur' }}
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#">
-                                <i class="bi bi-person"></i> Mon profil
-                            </a></li>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="bi bi-person" aria-hidden="true"></i> Mon profil
+                                </a>
+                            </li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/api/auth/logout">
-                                <i class="bi bi-box-arrow-right"></i> Déconnexion
-                            </a></li>
+                            <li>
+                                <form action="/api/auth/logout" method="POST" class="d-inline" id="logoutForm">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Déconnexion
+                                    </button>
+                                </form>
+                            </li>
                         </ul>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
-    
+
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse show">
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse" aria-label="Menu latéral">
                 <div class="position-sticky pt-3">
                     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
                         <span>Navigation</span>
                     </h6>
-                    
+
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="/dashboard">
-                                <i class="bi bi-speedometer2"></i> Tableau de bord
+                                <i class="bi bi-speedometer2" aria-hidden="true"></i> Tableau de bord
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/supervision">
-                                <i class="bi bi-graph-up-arrow"></i> Supervision
+                                <i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Supervision
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/planification">
-                                <i class="bi bi-calendar-check"></i> Planification
+                                <i class="bi bi-calendar-check" aria-hidden="true"></i> Planification
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/preparation">
-                                <i class="bi bi-file-earmark-text"></i> Préparation
+                                <i class="bi bi-file-earmark-text" aria-hidden="true"></i> Préparation
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/validation">
-                                <i class="bi bi-shield-check"></i> Validation
+                                <i class="bi bi-shield-check" aria-hidden="true"></i> Validation
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/commission">
-                                <i class="bi bi-people"></i> Commission
+                                <i class="bi bi-people" aria-hidden="true"></i> Commission
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/publication">
-                                <i class="bi bi-megaphone"></i> Publication
+                                <i class="bi bi-megaphone" aria-hidden="true"></i> Publication
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/markets">
-                                <i class="bi bi-list-check"></i> Marchés
+                                <i class="bi bi-list-check" aria-hidden="true"></i> Marchés
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/analysis">
-                                <i class="bi bi-graph-up"></i> Analyse PMMP
+                                <i class="bi bi-graph-up" aria-hidden="true"></i> Analyse PMMP
                             </a>
                         </li>
                     </ul>
-                    
+
                     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
                         <span>Actions rapides</span>
                     </h6>
-                    
+
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="/planification/new">
-                                <i class="bi bi-plus-circle"></i> Nouvelle planification
+                                <i class="bi bi-plus-circle" aria-hidden="true"></i> Nouvelle planification
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#newMarketModal">
-                                <i class="bi bi-plus-circle"></i> Nouveau marché
+                                <i class="bi bi-plus-circle" aria-hidden="true"></i> Nouveau marché
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/api/exports/markets/excel">
-                                <i class="bi bi-file-earmark-excel"></i> Exporter Excel
+                                <i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Exporter Excel
                             </a>
                         </li>
                     </ul>
-                    
+
                     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
                         <span>Statistiques</span>
                     </h6>
-                    
+
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="#">
-                                <i class="bi bi-pie-chart"></i> Rapports mensuels
+                                <i class="bi bi-pie-chart" aria-hidden="true"></i> Rapports mensuels
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#">
-                                <i class="bi bi-bar-chart"></i> Statistiques annuelles
+                                <i class="bi bi-bar-chart" aria-hidden="true"></i> Statistiques annuelles
                             </a>
                         </li>
                     </ul>
                 </div>
             </nav>
-            
+
             <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <main class="col-md-9 ms-sm-auto col-lg-10 main-content">
                 {% block content %}{% endblock %}
             </main>
         </div>
     </div>
     {% else %}
-    <div class="container">
-        {% block login_content %}{% endblock %}
-    </div>
+    <!-- Layout authentification (login, register, etc.) -->
+    <main class="auth-layout d-flex align-items-center min-vh-100 py-5">
+        <div class="container">
+            {% block login_content %}{% endblock %}
+        </div>
+    </main>
     {% endif %}
-    
+
+    <!-- Conteneur de notifications -->
+    <div id="notification-container"></div>
+
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- Custom JS -->
     <script>
+        // ─────────────────────────────────────────
         // Fonctions utilitaires globales
+        // ─────────────────────────────────────────
+
+        /**
+         * Formate une date en chaîne locale fr-FR
+         */
         function formatDate(date) {
             if (!date) return '';
             const d = new Date(date);
+            if (isNaN(d.getTime())) return '';
             return d.toLocaleDateString('fr-FR');
         }
-        
+
+        /**
+         * Formate un montant en dirhams marocains
+         * Gère correctement la valeur 0
+         */
         function formatAmount(amount) {
-            if (!amount) return '0,00 MAD';
+            if (amount === null || amount === undefined || isNaN(amount)) {
+                return '0,00 MAD';
+            }
             return new Intl.NumberFormat('fr-MA', {
                 style: 'currency',
                 currency: 'MAD'
             }).format(amount);
         }
-        
+
+        /**
+         * Affiche un spinner de chargement sur un bouton
+         */
         function showLoading(button) {
             const originalText = button.innerHTML;
-            button.innerHTML = '<span class="loading-spinner"></span> Chargement...';
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Chargement...';
             button.disabled = true;
             return originalText;
         }
-        
+
         function hideLoading(button, originalText) {
             button.innerHTML = originalText;
             button.disabled = false;
         }
-        
-        // Gestion des notifications
+
+        /**
+         * Affiche une notification toast en haut à droite
+         */
         function showNotification(message, type = 'success') {
+            const container = document.getElementById('notification-container');
+            if (!container) return;
+
             const notification = document.createElement('div');
-            notification.className = `alert alert-${type} alert-dismissible fade show`;
+            notification.className = `alert alert-${type} alert-dismissible fade show shadow-sm mb-2`;
             notification.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="d-flex align-items-center">
+                    <span>${message}</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Fermer"></button>
+                </div>
             `;
-            document.body.appendChild(notification);
-            
+
+            container.appendChild(notification);
+
+            // Auto-suppression après 5 secondes
             setTimeout(() => {
-                notification.remove();
+                if (notification.parentNode) {
+                    const bsAlert = bootstrap.Alert.getOrCreateInstance(notification);
+                    if (bsAlert) {
+                        bsAlert.close();
+                    } else {
+                        notification.remove();
+                    }
+                }
             }, 5000);
         }
+
+        // ─────────────────────────────────────────
+        // Gestion de la déconnexion sécurisée (POST)
+        // ─────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            const logoutForm = document.getElementById('logoutForm');
+            if (logoutForm) {
+                logoutForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+                        this.submit();
+                    }
+                });
+            }
+        });
     </script>
-    
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

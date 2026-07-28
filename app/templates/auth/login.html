@@ -2,56 +2,92 @@
 
 {% block title %}Connexion - Gestion des Marchés Publics{% endblock %}
 
-{% block content %}
-<div class="row justify-content-center align-items-center" style="min-height: 100vh;">
+{% block login_content %}
+<div class="row justify-content-center align-items-center">
     <div class="col-md-6 col-lg-4">
         <div class="card shadow">
             <div class="card-body p-5">
                 <div class="text-center mb-4">
-                    <i class="bi bi-building" style="font-size: 3rem; color: var(--primary-color);"></i>
+                    <i class="bi bi-building" style="font-size: 3rem; color: var(--primary-color);" aria-hidden="true"></i>
                     <h3 class="mt-3">Gestion des Marchés Publics</h3>
                     <p class="text-muted">Communes Territoriales Marocaines</p>
                 </div>
-                
-                <form id="loginForm">
+
+                <!-- Zone d'erreur globale -->
+                <div id="loginError" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="loginForm" novalidate>
                     <div class="mb-3">
                         <label for="username" class="form-label">Nom d'utilisateur</label>
-                        <div class="input-group">
+                        <div class="input-group has-validation">
                             <span class="input-group-text">
-                                <i class="bi bi-person"></i>
+                                <i class="bi bi-person" aria-hidden="true"></i>
                             </span>
-                            <input type="text" class="form-control" id="username" name="username" required>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="username"
+                                name="username"
+                                autocomplete="username"
+                                autofocus
+                                required
+                                aria-describedby="usernameFeedback"
+                            >
+                            <div id="usernameFeedback" class="invalid-feedback">
+                                Veuillez saisir votre nom d'utilisateur.
+                            </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="password" class="form-label">Mot de passe</label>
-                        <div class="input-group">
+                        <div class="input-group has-validation">
                             <span class="input-group-text">
-                                <i class="bi bi-lock"></i>
+                                <i class="bi bi-lock" aria-hidden="true"></i>
                             </span>
-                            <input type="password" class="form-control" id="password" name="password" required>
+                            <input
+                                type="password"
+                                class="form-control"
+                                id="password"
+                                name="password"
+                                autocomplete="current-password"
+                                required
+                                aria-describedby="passwordFeedback"
+                            >
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                id="togglePassword"
+                                title="Afficher le mot de passe"
+                                aria-label="Afficher le mot de passe"
+                            >
+                                <i class="bi bi-eye" aria-hidden="true" id="togglePasswordIcon"></i>
+                            </button>
+                            <div id="passwordFeedback" class="invalid-feedback">
+                                Veuillez saisir votre mot de passe.
+                            </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="rememberMe">
                         <label class="form-check-label" for="rememberMe">
                             Se souvenir de moi
                         </label>
                     </div>
-                    
+
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-box-arrow-in-right"></i> Se connecter
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                            <span id="submitBtnText">Se connecter</span>
                         </button>
                     </div>
                 </form>
-                
+
                 <div class="text-center mt-4">
                     <a href="#" class="text-decoration-none">Mot de passe oublié ?</a>
                 </div>
-                
+
                 <div class="mt-4 pt-4 border-top">
                     <p class="text-center text-muted small">
                         Système de gestion des marchés publics conforme à la réglementation marocaine
@@ -61,47 +97,108 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const button = this.querySelector('button[type="submit"]');
-    const originalText = button.innerHTML;
-    
-    showLoading(button);
-    
-    try {
-        const response = await fetch('/api/auth/login/json', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ username, password })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            // Stocker le token dans un cookie
-            document.cookie = `access_token=${data.access_token}; path=/; max-age=1800`;
-            
-            showNotification('Connexion réussie !', 'success');
-            
-            // Rediriger vers le tableau de bord
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 1000);
-        } else {
-            showNotification(data.detail || 'Erreur de connexion', 'danger');
+(function() {
+    'use strict';
+
+    const form = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const rememberMeInput = document.getElementById('rememberMe');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const loginError = document.getElementById('loginError');
+    const togglePassword = document.getElementById('togglePassword');
+    const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+
+    // ─────────────────────────────────────────
+    // Toggle affichage mot de passe
+    // ─────────────────────────────────────────
+    togglePassword.addEventListener('click', function() {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        togglePasswordIcon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+        togglePassword.setAttribute('aria-label', isPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+        togglePassword.setAttribute('title', isPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+    });
+
+    // ─────────────────────────────────────────
+    // Soumission du formulaire
+    // ─────────────────────────────────────────
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        loginError.classList.add('d-none');
+        loginError.textContent = '';
+
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            return;
         }
-    } catch (error) {
-        showNotification('Erreur de connexion au serveur', 'danger');
-    } finally {
-        hideLoading(button, originalText);
+
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+        const rememberMe = rememberMeInput.checked;
+
+        setLoading(true);
+
+        try {
+            const response = await fetch('/api/auth/login/json', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            let data = {};
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            }
+
+            if (response.ok) {
+                // Stockage sécurisé du token
+                const maxAge = rememberMe ? 2592000 : 1800; // 30 jours ou 30 min
+                const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+                document.cookie = 'access_token=' + encodeURIComponent(data.access_token) +
+                    '; path=/' +
+                    '; max-age=' + maxAge +
+                    '; SameSite=Lax' +
+                    secureFlag;
+
+                showNotification('Connexion réussie !', 'success');
+                window.location.href = '/dashboard';
+            } else {
+                const message = data.detail || data.message || 'Nom d\'utilisateur ou mot de passe incorrect.';
+                loginError.textContent = message;
+                loginError.classList.remove('d-none');
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        } catch (error) {
+            console.error('Erreur réseau:', error);
+            loginError.textContent = 'Impossible de joindre le serveur. Veuillez réessayer.';
+            loginError.classList.remove('d-none');
+        } finally {
+            setLoading(false);
+        }
+    });
+
+    // ─────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────
+    function setLoading(isLoading) {
+        submitBtn.disabled = isLoading;
+        if (isLoading) {
+            submitBtnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Connexion...';
+        } else {
+            submitBtnText.textContent = 'Se connecter';
+        }
     }
-});
+})();
 </script>
 {% endblock %}
