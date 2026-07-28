@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+
+{% block title %}Chatbot IA - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Sidebar des sessions -->
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Sessions</h5>
+                    <button class="btn btn-sm btn-light" onclick="createNewSession()">
+                        <i class="bi bi-plus"></i> Nouvelle
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div id="sessionsList" class="list-group list-group-flush">
+                        <!-- Les sessions seront chargées ici -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistiques de l'index -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-database"></i> Base de connaissances</h6>
+                </div>
+                <div class="card-body">
+                    <div id="indexStats">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Zone de conversation -->
+        <div class="col-md-9">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><i class="bi bi-robot"></i> Assistant IA Marchés Publics</h5>
+                        <small class="text-white-50">Spécialisé dans la réglementation marocaine des marchés publics</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light" onclick="loadIndexStats()">
+                            <i class="bi bi-arrow-clockwise"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Messages -->
+                    <div id="chatMessages" class="chat-container p-3" style="height: 500px; overflow-y: auto;">
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+                            <p class="mt-3">Commencez une conversation en posant une question sur les marchés publics</p>
+                            <div class="mt-3">
+                                <small class="text-muted">Exemples de questions :</small>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary me-2 mb-2" onclick="sendExample('Quels sont les marchés en retard ?')">
+                                        Marchés en retard
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary me-2 mb-2" onclick="sendExample('Quels sont les délais de publication selon le Décret 2-22-431 ?')">
+                                        Délais de publication
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary me-2 mb-2" onclick="sendExample('Comment créer un nouveau marché ?')">
+                                        Créer un marché
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Zone de saisie -->
+                    <div class="border-top p-3">
+                        <div class="input-group">
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="messageInput" 
+                                placeholder="Posez votre question sur les marchés publics..."
+                                onkeypress="handleKeyPress(event)"
+                            >
+                            <button class="btn btn-primary" onclick="sendMessage()">
+                                <i class="bi bi-send"></i> Envoyer
+                            </button>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle"></i> 
+                                Le chatbot peut répondre sur la réglementation (Décret 2-22-431), les données de l'ERP et l'utilisation de l'application.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de feedback -->
+<div class="modal fade" id="feedbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Feedback sur la réponse</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="feedbackMessageId">
+                <div class="mb-3">
+                    <label class="form-label">Cette réponse était-elle utile ?</label>
+                    <div>
+                        <button class="btn btn-outline-success me-2" onclick="setFeedback(true)">
+                            <i class="bi bi-hand-thumbs-up"></i> Oui
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="setFeedback(false)">
+                            <i class="bi bi-hand-thumbs-down"></i> Non
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Note (1-5)</label>
+                    <select class="form-select" id="feedbackRating">
+                        <option value="">Sélectionner...</option>
+                        <option value="1">1 - Très mauvaise</option>
+                        <option value="2">2 - Mauvaise</option>
+                        <option value="3">3 - Moyenne</option>
+                        <option value="4">4 - Bonne</option>
+                        <option value="5">5 - Excellente</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Commentaire (optionnel)</label>
+                    <textarea class="form-control" id="feedbackComment" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="submitFeedback()">Envoyer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chat-container {
+    background-color: #f8f9fa;
+}
+.message {
+    margin-bottom: 15px;
+    max-width: 80%;
+}
+.message-user {
+    margin-left: auto;
+}
+.message-assistant {
+    margin-right: auto;
+}
+.message-content {
+    padding: 12px 16px;
+    border-radius: 12px;
+    word-wrap: break-word;
+}
+.message-user .message-content {
+    background-color: #0d6efd;
+    color: white;
+}
+.message-assistant .message-content {
+    background-color: white;
+    border: 1px solid #dee2e6;
+}
+.message-meta {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 4px;
+}
+.source-badge {
+    font-size: 0.7rem;
+    margin-right: 4px;
+}
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+}
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background-color: #6c757d;
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+}
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+@keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-4px); }
+}
+</style>
+
+<script>
+let currentSessionId = null;
+let feedbackModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    feedbackModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+    loadSessions();
+    loadIndexStats();
+});
+
+function loadSessions() {
+    authenticatedFetch('/api/chatbot/sessions')
+        .then(response => response.json())
+        .then(sessions => {
+            const sessionsList = document.getElementById('sessionsList');
+            sessionsList.innerHTML = '';
+            
+            if (sessions.length === 0) {
+                sessionsList.innerHTML = '<div class="p-3 text-center text-muted">Aucune session</div>';
+                return;
+            }
+            
+            sessions.forEach(session => {
+                const isActive = session.id === currentSessionId;
+                const activeClass = isActive ? 'active' : '';
+                const date = new Date(session.updated_at).toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                sessionsList.innerHTML += `
+                    <button 
+                        class="list-group-item list-group-item-action ${activeClass}"
+                        onclick="loadSession(${session.id})"
+                    >
+                        <div class="d-flex w-100 justify-content-between">
+                            <small class="fw-bold">${session.session_name}</small>
+                            <small class="text-muted">${date}</small>
+                        </div>
+                    </button>
+                `;
+            });
+        })
+        .catch(error => {
+            console.error('Erreur chargement sessions:', error);
+        });
+}
+
+function createNewSession() {
+    authenticatedFetch('/api/chatbot/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(session => {
+        currentSessionId = session.id;
+        loadSessions();
+        loadMessages();
+    })
+    .catch(error => {
+        console.error('Erreur création session:', error);
+        showNotification('Erreur lors de la création de la session', 'danger');
+    });
+}
+
+function loadSession(sessionId) {
+    currentSessionId = sessionId;
+    loadSessions();
+    loadMessages();
+}
+
+function loadMessages() {
+    if (!currentSessionId) {
+        document.getElementById('chatMessages').innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+                <p class="mt-3">Sélectionnez ou créez une session pour commencer</p>
+            </div>
+        `;
+        return;
+    }
+    
+    authenticatedFetch(`/api/chatbot/sessions/${currentSessionId}/messages`)
+        .then(response => response.json())
+        .then(messages => {
+            const chatContainer = document.getElementById('chatMessages');
+            chatContainer.innerHTML = '';
+            
+            if (messages.length === 0) {
+                chatContainer.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Posez votre première question</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            messages.forEach(msg => {
+                appendMessage(msg);
+            });
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        })
+        .catch(error => {
+            console.error('Erreur chargement messages:', error);
+        });
+}
+
+function appendMessage(msg) {
+    const chatContainer = document.getElementById('chatMessages');
+    const isUser = msg.message_type === 'user';
+    
+    let sourcesHtml = '';
+    if (msg.sources && msg.sources.length > 0) {
+        sourcesHtml = '<div class="mt-2">';
+        msg.sources.forEach(source => {
+            const badgeClass = source.type === 'database' ? 'bg-info' : 
+                              source.type === 'knowledge' ? 'bg-success' : 
+                              source.type === 'assistance' ? 'bg-warning' : 'bg-secondary';
+            const label = source.type === 'database' ? 'Base de données' :
+                         source.type === 'knowledge' ? 'Connaissances' :
+                         source.type === 'assistance' ? 'Assistance' : source.type;
+            sourcesHtml += `<span class="badge ${badgeClass} source-badge">${label}</span>`;
+        });
+        sourcesHtml += '</div>';
+    }
+    
+    let feedbackHtml = '';
+    if (!isUser) {
+        feedbackHtml = `
+            <div class="mt-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="openFeedbackModal(${msg.id})">
+                    <i class="bi bi-hand-thumbs-up"></i> Feedback
+                </button>
+            </div>
+        `;
+    }
+    
+    const messageHtml = `
+        <div class="message ${isUser ? 'message-user' : 'message-assistant'}">
+            <div class="message-content">
+                ${formatMessage(msg.content)}
+                ${sourcesHtml}
+                ${feedbackHtml}
+            </div>
+            <div class="message-meta">
+                ${new Date(msg.created_at).toLocaleTimeString('fr-FR')}
+                ${msg.confidence ? ` • Confiance: ${Math.round(msg.confidence * 100)}%` : ''}
+            </div>
+        </div>
+    `;
+    
+    chatContainer.innerHTML += messageHtml;
+}
+
+function formatMessage(content) {
+    // Convertir les sauts de ligne en <br>
+    return content.replace(/\n/g, '<br>');
+}
+
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    
+    if (!message || !currentSessionId) {
+        if (!currentSessionId) {
+            createNewSession();
+        }
+        return;
+    }
+    
+    input.value = '';
+    
+    // Afficher le message utilisateur
+    appendMessage({
+        message_type: 'user',
+        content: message,
+        created_at: new Date().toISOString()
+    });
+    
+    // Afficher l'indicateur de frappe
+    showTypingIndicator();
+    
+    // Envoyer le message
+    authenticatedFetch(`/api/chatbot/sessions/${currentSessionId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: message })
+    })
+    .then(response => response.json())
+    .then(response => {
+        hideTypingIndicator();
+        appendMessage({
+            message_type: 'assistant',
+            content: response.content,
+            sources: response.sources,
+            confidence: response.confidence,
+            sql_query: response.sql_query,
+            created_at: new Date().toISOString()
+        });
+        
+        // Scroll to bottom
+        const chatContainer = document.getElementById('chatMessages');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    })
+    .catch(error => {
+        hideTypingIndicator();
+        console.error('Erreur envoi message:', error);
+        showNotification('Erreur lors de l\'envoi du message', 'danger');
+    });
+}
+
+function sendExample(message) {
+    document.getElementById('messageInput').value = message;
+    sendMessage();
+}
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+}
+
+function showTypingIndicator() {
+    const chatContainer = document.getElementById('chatMessages');
+    chatContainer.innerHTML += `
+        <div class="message message-assistant" id="typingIndicator">
+            <div class="message-content">
+                <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+    `;
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) {
+        indicator.remove();
+    }
+}
+
+function loadIndexStats() {
+    const statsContainer = document.getElementById('indexStats');
+    statsContainer.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
+    
+    authenticatedFetch('/api/chatbot/index/statistics')
+        .then(response => response.json())
+        .then(stats => {
+            statsContainer.innerHTML = `
+                <div class="mb-2">
+                    <small class="text-muted">Documents réglementaires</small>
+                    <div class="fw-bold">${stats.total_knowledge_base || 0}</div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Documents internes</small>
+                    <div class="fw-bold">${stats.total_documents || 0}</div>
+                </div>
+                <div>
+                    <small class="text-muted">Par type</small>
+                    <div class="small">
+                        ${Object.entries(stats.by_type || {}).map(([type, count]) => `
+                            <div class="d-flex justify-content-between">
+                                <span>${type}</span>
+                                <span>${count}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            console.error('Erreur chargement stats:', error);
+            statsContainer.innerHTML = '<div class="text-danger">Erreur de chargement</div>';
+        });
+}
+
+function openFeedbackModal(messageId) {
+    document.getElementById('feedbackMessageId').value = messageId;
+    document.getElementById('feedbackRating').value = '';
+    document.getElementById('feedbackComment').value = '';
+    feedbackModal.show();
+}
+
+function setFeedback(isHelpful) {
+    // Mettre en surbrillance le bouton sélectionné
+    const buttons = document.querySelectorAll('#feedbackModal .btn-outline-success, #feedbackModal .btn-outline-danger');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    if (isHelpful) {
+        document.querySelector('#feedbackModal .btn-outline-success').classList.add('active');
+    } else {
+        document.querySelector('#feedbackModal .btn-outline-danger').classList.add('active');
+    }
+}
+
+function submitFeedback() {
+    const messageId = document.getElementById('feedbackMessageId').value;
+    const rating = document.getElementById('feedbackRating').value;
+    const comment = document.getElementById('feedbackComment').value;
+    
+    const isHelpful = document.querySelector('#feedbackModal .btn-outline-success.active') !== null;
+    
+    authenticatedFetch('/api/chatbot/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            message_id: messageId,
+            rating: rating ? parseInt(rating) : null,
+            is_helpful: isHelpful,
+            comment: comment
+        })
+    })
+    .then(response => response.json())
+    .then(() => {
+        feedbackModal.hide();
+        showNotification('Feedback enregistré avec succès', 'success');
+    })
+    .catch(error => {
+        console.error('Erreur feedback:', error);
+        showNotification('Erreur lors de l\'enregistrement du feedback', 'danger');
+    });
+}
+</script>
+{% endblock %}

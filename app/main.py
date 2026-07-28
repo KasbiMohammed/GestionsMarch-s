@@ -18,7 +18,7 @@ from app.database import engine, get_db, init_db
 from app.api import (
     auth, users, markets, stages, documents, dashboard,
     search, exports, analysis, market_planning, market_preparation,
-    validation_workflow, commission, publication, supervision, deadlines
+    validation_workflow, commission, publication, supervision, deadlines, chatbot
 )
 
 logger = logging.getLogger(__name__)
@@ -111,6 +111,7 @@ app.include_router(commission.router, prefix="/api/commission", tags=["Commissio
 app.include_router(publication.router, prefix="/api/publication", tags=["Publication"])
 app.include_router(supervision.router, prefix="/api/supervision", tags=["Supervision"])
 app.include_router(deadlines.router, prefix="/api/deadlines", tags=["Deadlines"])
+app.include_router(chatbot.router, prefix="/api/chatbot", tags=["Chatbot"])
 
 
 # ─────────────────────────────────────────────
@@ -383,6 +384,15 @@ async def deadlines_calendar_page(request: Request, db: Session = Depends(get_db
     if not user:
         return templates.TemplateResponse("auth/login.html", {"request": request})
     return templates.TemplateResponse("deadlines/calendar.html", {"request": request, "user": user})
+
+
+@app.get("/chatbot", response_class=HTMLResponse)
+async def chatbot_page(request: Request, db: Session = Depends(get_db)):
+    """Page du chatbot IA"""
+    user = get_current_user_or_none(request, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    return templates.TemplateResponse("chatbot/chat.html", {"request": request, "user": user})
 
 
 if __name__ == "__main__":
