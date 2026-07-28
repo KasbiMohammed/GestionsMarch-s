@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Délais Réglementaires - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Gestion des Délais Réglementaires</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="/deadlines/calendar" class="btn btn-outline-secondary">
+                <i class="bi bi-calendar3"></i> Calendrier
+            </a>
+            <a href="/deadlines/settings" class="btn btn-outline-secondary">
+                <i class="bi bi-gear"></i> Paramètres
+            </a>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDeadlineModal">
+            <i class="bi bi-plus-circle"></i> Nouveau Délai
+        </button>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h5 class="card-title">Total</h5>
+                <h2 class="card-text" id="statTotal">0</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <h5 class="card-title">Dépassés</h5>
+                <h2 class="card-text" id="statOverdue">0</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-danger" style="background-color: #dc3545 !important;">
+            <div class="card-body">
+                <h5 class="card-title">Critiques</h5>
+                <h2 class="card-text" id="statCritical">0</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Importants</h5>
+                <h2 class="card-text" id="statImportant">0</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Attention</h5>
+                <h2 class="card-text" id="statAttention">0</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Normaux</h5>
+                <h2 class="card-text" id="statNormal">0</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <select class="form-select" id="filterType">
+                    <option value="">Tous les types</option>
+                    <option value="publication_pmmp">Publication PMMP</option>
+                    <option value="publication_presse">Publication Presse</option>
+                    <option value="delai_ouverture_plis">Délai ouverture plis</option>
+                    <option value="delai_eclaircissement">Délai éclaircissement</option>
+                    <option value="ouverture_plis">Ouverture plis</option>
+                    <option value="validite_offres">Validité offres</option>
+                    <option value="delai_attente_approbation">Délai attente approbation</option>
+                    <option value="notification_attribution">Notification attribution</option>
+                    <option value="ordre_service">Ordre de service</option>
+                    <option value="reception_provisoire">Réception provisoire</option>
+                    <option value="reception_definitive">Réception définitive</option>
+                    <option value="delai_paiement">Délai paiement</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filterStatus">
+                    <option value="">Tous les statuts</option>
+                    <option value="actif">Actif</option>
+                    <option value="termine">Terminé</option>
+                    <option value="depasse">Dépassé</option>
+                    <option value="annule">Annulé</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filterAlert">
+                    <option value="">Tous les niveaux</option>
+                    <option value="normal">Normal</option>
+                    <option value="attention">Attention</option>
+                    <option value="important">Important</option>
+                    <option value="critique">Critique</option>
+                    <option value="depasse">Dépassé</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau des délais -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Liste des Délais Réglementaires</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="deadlinesTable">
+                <thead>
+                    <tr>
+                        <th>Titre</th>
+                        <th>Type</th>
+                        <th>Date limite</th>
+                        <th>Jours restants</th>
+                        <th>Niveau d'alerte</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="deadlinesTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center">Chargement...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajout Délai -->
+<div class="modal fade" id="addDeadlineModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ajouter un Délai Réglementaire</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addDeadlineForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Type de délai *</label>
+                            <select class="form-select" id="deadlineType" required>
+                                <option value="">Sélectionner...</option>
+                                <option value="publication_pmmp">Publication PMMP</option>
+                                <option value="publication_presse">Publication Presse</option>
+                                <option value="delai_ouverture_plis">Délai ouverture plis</option>
+                                <option value="delai_eclaircissement">Délai éclaircissement</option>
+                                <option value="delai_reponse_eclaircissement">Réponse éclaircissement</option>
+                                <option value="report_ouverture">Report ouverture</option>
+                                <option value="ouverture_plis">Ouverture plis</option>
+                                <option value="validite_offres">Validité offres</option>
+                                <option value="delai_attente_approbation">Délai attente approbation</option>
+                                <option value="notification_attribution">Notification attribution</option>
+                                <option value="ordre_service">Ordre de service</option>
+                                <option value="debut_execution">Début exécution</option>
+                                <option value="fin_execution">Fin exécution</option>
+                                <option value="reception_provisoire">Réception provisoire</option>
+                                <option value="reception_definitive">Réception définitive</option>
+                                <option value="garantie_soumissionnaire">Garantie soumissionnaire</option>
+                                <option value="garantie_execution">Garantie exécution</option>
+                                <option value="delai_reclamation">Délai réclamation</option>
+                                <option value="delai_recours">Délai recours</option>
+                                <option value="delai_paiement">Délai paiement</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Marché (optionnel)</label>
+                            <select class="form-select" id="marketId">
+                                <option value="">Aucun</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Titre *</label>
+                        <input type="text" class="form-control" id="deadlineTitle" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date de départ *</label>
+                            <input type="date" class="form-control" id="startDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date limite *</label>
+                            <input type="date" class="form-control" id="dueDate" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="deadlineDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Référence réglementaire</label>
+                        <input type="text" class="form-control" id="deadlineReference">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="addDeadline()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modification Délai -->
+<div class="modal fade" id="editDeadlineModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier le Délai</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editDeadlineForm">
+                    <input type="hidden" id="editDeadlineId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Type de délai</label>
+                            <select class="form-select" id="editDeadlineType" disabled>
+                                <option value="">Sélectionner...</option>
+                                <option value="publication_pmmp">Publication PMMP</option>
+                                <option value="publication_presse">Publication Presse</option>
+                                <option value="delai_ouverture_plis">Délai ouverture plis</option>
+                                <option value="delai_eclaircissement">Délai éclaircissement</option>
+                                <option value="delai_reponse_eclaircissement">Réponse éclaircissement</option>
+                                <option value="report_ouverture">Report ouverture</option>
+                                <option value="ouverture_plis">Ouverture plis</option>
+                                <option value="validite_offres">Validité offres</option>
+                                <option value="delai_attente_approbation">Délai attente approbation</option>
+                                <option value="notification_attribution">Notification attribution</option>
+                                <option value="ordre_service">Ordre de service</option>
+                                <option value="debut_execution">Début exécution</option>
+                                <option value="fin_execution">Fin exécution</option>
+                                <option value="reception_provisoire">Réception provisoire</option>
+                                <option value="reception_definitive">Réception définitive</option>
+                                <option value="garantie_soumissionnaire">Garantie soumissionnaire</option>
+                                <option value="garantie_execution">Garantie exécution</option>
+                                <option value="delai_reclamation">Délai réclamation</option>
+                                <option value="delai_recours">Délai recours</option>
+                                <option value="delai_paiement">Délai paiement</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Statut</label>
+                            <select class="form-select" id="editStatus">
+                                <option value="actif">Actif</option>
+                                <option value="termine">Terminé</option>
+                                <option value="annule">Annulé</option>
+                                <option value="suspendu">Suspendu</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Titre</label>
+                        <input type="text" class="form-control" id="editTitle" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date de départ</label>
+                            <input type="date" class="form-control" id="editStartDate">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date limite</label>
+                            <input type="date" class="form-control" id="editDueDate">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date de complétion</label>
+                        <input type="date" class="form-control" id="editCompletedDate">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="editDescription" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="updateDeadline()">Mettre à jour</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentDeadlines = [];
+
+// Helper function to get authentication token
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+// Helper function to make authenticated fetch calls
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+// Utility functions
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR');
+}
+
+function getAlertBadge(level) {
+    const badges = {
+        'normal': '<span class="badge bg-success">Normal</span>',
+        'attention': '<span class="badge bg-info">Attention</span>',
+        'important': '<span class="badge bg-warning">Important</span>',
+        'critique': '<span class="badge bg-danger">Critique</span>',
+        'depasse': '<span class="badge bg-secondary">Dépassé</span>'
+    };
+    return badges[level] || level;
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'actif': '<span class="badge bg-success">Actif</span>',
+        'termine': '<span class="badge bg-primary">Terminé</span>',
+        'depasse': '<span class="badge bg-danger">Dépassé</span>',
+        'annule': '<span class="badge bg-secondary">Annulé</span>',
+        'suspendu': '<span class="badge bg-warning">Suspendu</span>'
+    };
+    return badges[status] || status;
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
+// Load statistics
+async function loadStatistics() {
+    try {
+        const response = await authenticatedFetch('/api/deadlines/statistics/summary');
+        const data = await response.json();
+        
+        document.getElementById('statTotal').textContent = data.total || 0;
+        document.getElementById('statOverdue').textContent = data.overdue || 0;
+        document.getElementById('statCritical').textContent = data.critical || 0;
+        document.getElementById('statImportant').textContent = data.important || 0;
+        document.getElementById('statAttention').textContent = data.attention || 0;
+        document.getElementById('statNormal').textContent = data.normal || 0;
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+    }
+}
+
+// Load deadlines
+async function loadDeadlines() {
+    try {
+        const response = await authenticatedFetch('/api/deadlines/');
+        const data = await response.json();
+        currentDeadlines = data;
+        renderDeadlinesTable(data);
+    } catch (error) {
+        console.error('Error loading deadlines:', error);
+        document.getElementById('deadlinesTableBody').innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erreur de chargement</td></tr>';
+    }
+}
+
+function renderDeadlinesTable(deadlines) {
+    const tbody = document.getElementById('deadlinesTableBody');
+    
+    if (deadlines.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Aucun délai trouvé</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = deadlines.map(deadline => `
+        <tr>
+            <td><strong>${deadline.title}</strong></td>
+            <td><small>${deadline.deadline_type}</small></td>
+            <td>${formatDate(deadline.due_date)}</td>
+            <td class="${deadline.days_remaining < 0 ? 'text-danger' : ''}">${deadline.days_remaining}</td>
+            <td>${getAlertBadge(deadline.alert_level)}</td>
+            <td>${getStatusBadge(deadline.status)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="editDeadline(${deadline.id})">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteDeadline(${deadline.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Add deadline
+async function addDeadline() {
+    const deadlineData = {
+        deadline_type: document.getElementById('deadlineType').value,
+        market_id: document.getElementById('marketId').value || null,
+        title: document.getElementById('deadlineTitle').value,
+        start_date: document.getElementById('startDate').value,
+        due_date: document.getElementById('dueDate').value,
+        description: document.getElementById('deadlineDescription').value,
+        reference: document.getElementById('deadlineReference').value
+    };
+    
+    try {
+        const response = await authenticatedFetch('/api/deadlines/', {
+            method: 'POST',
+            body: JSON.stringify(deadlineData)
+        });
+        
+        if (response.ok) {
+            showNotification('Délai créé avec succès');
+            bootstrap.Modal.getInstance(document.getElementById('addDeadlineModal')).hide();
+            document.getElementById('addDeadlineForm').reset();
+            loadDeadlines();
+            loadStatistics();
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de la création', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de la création du délai', 'danger');
+    }
+}
+
+// Edit deadline
+async function editDeadline(id) {
+    const deadline = currentDeadlines.find(d => d.id === id);
+    if (!deadline) return;
+    
+    document.getElementById('editDeadlineId').value = deadline.id;
+    document.getElementById('editDeadlineType').value = deadline.deadline_type;
+    document.getElementById('editStatus').value = deadline.status;
+    document.getElementById('editTitle').value = deadline.title;
+    document.getElementById('editStartDate').value = deadline.start_date;
+    document.getElementById('editDueDate').value = deadline.due_date;
+    document.getElementById('editCompletedDate').value = deadline.completed_date || '';
+    document.getElementById('editDescription').value = deadline.description || '';
+    
+    new bootstrap.Modal(document.getElementById('editDeadlineModal')).show();
+}
+
+async function updateDeadline() {
+    const id = document.getElementById('editDeadlineId').value;
+    const deadlineData = {
+        status: document.getElementById('editStatus').value,
+        title: document.getElementById('editTitle').value,
+        start_date: document.getElementById('editStartDate').value,
+        due_date: document.getElementById('editDueDate').value,
+        completed_date: document.getElementById('editCompletedDate').value || null,
+        description: document.getElementById('editDescription').value
+    };
+    
+    try {
+        const response = await authenticatedFetch(`/api/deadlines/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(deadlineData)
+        });
+        
+        if (response.ok) {
+            showNotification('Délai mis à jour avec succès');
+            bootstrap.Modal.getInstance(document.getElementById('editDeadlineModal')).hide();
+            loadDeadlines();
+            loadStatistics();
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de la mise à jour', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de la mise à jour du délai', 'danger');
+    }
+}
+
+// Delete deadline
+async function deleteDeadline(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce délai ?')) return;
+    
+    try {
+        const response = await authenticatedFetch(`/api/deadlines/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Délai supprimé avec succès');
+            loadDeadlines();
+            loadStatistics();
+        } else {
+            showNotification('Erreur lors de la suppression', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de la suppression du délai', 'danger');
+    }
+}
+
+// Apply filters
+function applyFilters() {
+    const typeFilter = document.getElementById('filterType').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+    const alertFilter = document.getElementById('filterAlert').value;
+    
+    let filtered = currentDeadlines;
+    
+    if (typeFilter) {
+        filtered = filtered.filter(d => d.deadline_type === typeFilter);
+    }
+    if (statusFilter) {
+        filtered = filtered.filter(d => d.status === statusFilter);
+    }
+    if (alertFilter) {
+        filtered = filtered.filter(d => d.alert_level === alertFilter);
+    }
+    
+    renderDeadlinesTable(filtered);
+}
+
+// Load markets for dropdown
+async function loadMarkets() {
+    try {
+        const response = await authenticatedFetch('/api/markets/');
+        const data = await response.json();
+        
+        const select = document.getElementById('marketId');
+        select.innerHTML = '<option value="">Aucun</option>';
+        data.forEach(market => {
+            select.innerHTML += `<option value="${market.id}">${market.market_number} - ${market.object}</option>`;
+        });
+    } catch (error) {
+        console.error('Error loading markets:', error);
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadStatistics();
+    loadDeadlines();
+    loadMarkets();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Calendrier des Délais - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Calendrier des Délais Réglementaires</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="/deadlines" class="btn btn-outline-secondary">
+                <i class="bi bi-list"></i> Liste des Délais
+            </a>
+            <a href="/deadlines/settings" class="btn btn-outline-secondary">
+                <i class="bi bi-gear"></i> Paramètres
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Légende -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="card-title">Légende des couleurs</h6>
+        <div class="d-flex flex-wrap gap-3">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success me-2">Normal</span>
+                <small>Délai dans les normes</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-info me-2">Attention</span>
+                <small>Délai approchant</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-warning me-2">Important</span>
+                <small>Délai proche</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-danger me-2">Critique</span>
+                <small>Délai urgent</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-secondary me-2">Dépassé</span>
+                <small>Délai expiré</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendrier -->
+<div class="card">
+    <div class="card-body">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<!-- Modal Détails Délai -->
+<div class="modal fade" id="deadlineDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails du Délai</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="deadlineDetailsContent">
+                <!-- Contenu dynamique -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <a href="/deadlines" class="btn btn-primary">Voir dans la liste</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/fr.js"></script>
+
+<script>
+let calendar;
+
+// Helper function to get authentication token
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+// Helper function to make authenticated fetch calls
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR');
+}
+
+function getAlertBadge(level) {
+    const badges = {
+        'normal': '<span class="badge bg-success">Normal</span>',
+        'attention': '<span class="badge bg-info">Attention</span>',
+        'important': '<span class="badge bg-warning">Important</span>',
+        'critique': '<span class="badge bg-danger">Critique</span>',
+        'depasse': '<span class="badge bg-secondary">Dépassé</span>'
+    };
+    return badges[level] || level;
+}
+
+// Initialize calendar
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'fr',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,listWeek'
+        },
+        buttonText: {
+            today: 'Aujourd\'hui',
+            month: 'Mois',
+            week: 'Semaine',
+            day: 'Jour',
+            list: 'Liste'
+        },
+        events: function(info, successCallback, failureCallback) {
+            const start = info.startStr.split('T')[0];
+            const end = info.endStr.split('T')[0];
+            
+            authenticatedFetch(`/api/deadlines/calendar/events?start_date=${start}&end_date=${end}`)
+                .then(response => response.json())
+                .then(events => {
+                    successCallback(events);
+                })
+                .catch(error => {
+                    console.error('Error loading calendar events:', error);
+                    failureCallback(error);
+                });
+        },
+        eventClick: function(info) {
+            showDeadlineDetails(info.event);
+        },
+        eventDidMount: function(info) {
+            // Ajouter un tooltip
+            const title = info.event.title;
+            const deadlineType = info.event.extendedProps.deadline_type;
+            const daysRemaining = info.event.extendedProps.days_remaining;
+            
+            info.el.setAttribute('title', `${title}\nType: ${deadlineType}\nJours restants: ${daysRemaining}`);
+        }
+    });
+    
+    calendar.render();
+});
+
+// Show deadline details
+async function showDeadlineDetails(event) {
+    const deadlineId = event.id;
+    
+    try {
+        const response = await authenticatedFetch(`/api/deadlines/${deadlineId}`);
+        const deadline = await response.json();
+        
+        const content = `
+            <div class="mb-3">
+                <label class="text-muted small">Titre</label>
+                <p class="mb-0"><strong>${deadline.title}</strong></p>
+            </div>
+            <div class="mb-3">
+                <label class="text-muted small">Type de délai</label>
+                <p class="mb-0">${deadline.deadline_type}</p>
+            </div>
+            <div class="mb-3">
+                <label class="text-muted small">Date limite</label>
+                <p class="mb-0"><strong>${formatDate(deadline.due_date)}</strong></p>
+            </div>
+            <div class="mb-3">
+                <label class="text-muted small">Jours restants</label>
+                <p class="mb-0 ${deadline.days_remaining < 0 ? 'text-danger' : ''}">${deadline.days_remaining}</p>
+            </div>
+            <div class="mb-3">
+                <label class="text-muted small">Niveau d'alerte</label>
+                <p class="mb-0">${getAlertBadge(deadline.alert_level)}</p>
+            </div>
+            <div class="mb-3">
+                <label class="text-muted small">Statut</label>
+                <p class="mb-0">${deadline.status}</p>
+            </div>
+            ${deadline.description ? `
+            <div class="mb-3">
+                <label class="text-muted small">Description</label>
+                <p class="mb-0">${deadline.description}</p>
+            </div>
+            ` : ''}
+            ${deadline.reference ? `
+            <div class="mb-3">
+                <label class="text-muted small">Référence réglementaire</label>
+                <p class="mb-0">${deadline.reference}</p>
+            </div>
+            ` : ''}
+        `;
+        
+        document.getElementById('deadlineDetailsContent').innerHTML = content;
+        new bootstrap.Modal(document.getElementById('deadlineDetailsModal')).show();
+    } catch (error) {
+        console.error('Error loading deadline details:', error);
+    }
+}
+</script>
+{% endblock %}

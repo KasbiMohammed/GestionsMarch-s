@@ -6,6 +6,7 @@ Module 7: Analyse automatique
 from datetime import datetime
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from statistics import median, mean, stdev
 from dataclasses import dataclass
 
@@ -44,6 +45,11 @@ class AnalysisService:
         Returns:
             Instance de AnalysisResult
         """
+        # Récupérer le marché pour obtenir l'estimation
+        market = self.db.query(Market).filter(
+            Market.id == market_id
+        ).first()
+        
         # Récupérer les offres admissibles
         offers = self.db.query(Offer).filter(
             and_(
@@ -81,8 +87,9 @@ class AnalysisService:
         else:
             trimmed_mean_price = mean_price
         
-        # Calculer le prix de référence
-        reference_price = self._calculate_reference_price(amounts)
+        # Calculer le prix de référence avec la formule personnalisée
+        estimated_amount = market.estimated_amount if market else 0
+        reference_price = self._calculate_reference_price(amounts, estimated_amount)
         
         # Détecter les offres anormales
         abnormal_offers = self._detect_abnormal_offers(offers, median_price, std_dev_price)
@@ -116,12 +123,14 @@ class AnalysisService:
             statistics=statistics
         )
     
-    def _calculate_reference_price(self, amounts: List[float]) -> float:
+    def _calculate_reference_price(self, amounts: List[float], estimated_amount: float = 0) -> float:
         """
-        Calcule le prix de référence
+        Calcule le prix de référence selon la formule personnalisée:
+        Prix de référence = (somme des prix / nombre d'entreprises + Estimation) / 2
         
         Args:
             amounts: Liste des montants
+            estimated_amount: Montant estimé du marché
             
         Returns:
             Prix de référence
@@ -129,8 +138,13 @@ class AnalysisService:
         if not amounts:
             return 0.0
         
-        # Le prix de référence est généralement la médiane
-        return median(amounts)
+        # Calculer la moyenne des offres
+        average_offers = sum(amounts) / len(amounts)
+        
+        # Formule personnalisée: (moyenne des offres + estimation) / 2
+        reference_price = (average_offers + estimated_amount) / 2
+        
+        return reference_price
     
     def _detect_abnormal_offers(self, offers: List[Offer], median: float, std_dev: float) -> Dict[str, List[Dict]]:
         """

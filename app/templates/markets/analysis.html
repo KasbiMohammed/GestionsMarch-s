@@ -21,16 +21,6 @@
                         <div class="form-text">Collez l'URL complète du marché que vous souhaitez analyser</div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="analysisMethod" class="form-label">Méthode de calcul du prix de référence</label>
-                        <select class="form-select" id="analysisMethod">
-                            <option value="median">Médiane</option>
-                            <option value="mean">Moyenne</option>
-                            <option value="trimmed_mean">Moyenne tronquée</option>
-                            <option value="iqr">Écart interquartile (IQR)</option>
-                        </select>
-                    </div>
-                    
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary btn-lg">
                             <i class="bi bi-graph-up"></i> Analyser le marché
@@ -123,19 +113,8 @@
                     <li>Recherchez le marché que vous souhaitez analyser</li>
                     <li>Copiez l'URL complète de la page du marché</li>
                     <li>Collez l'URL dans le champ ci-dessus</li>
-                    <li>Choisissez la méthode de calcul du prix de référence</li>
                     <li>Cliquez sur "Analyser le marché"</li>
                 </ol>
-                
-                <hr>
-                
-                <h6>Méthodes de calcul</h6>
-                <ul>
-                    <li><strong>Médiane:</strong> Valeur centrale des offres</li>
-                    <li><strong>Moyenne:</strong> Moyenne arithmétique des offres</li>
-                    <li><strong>Moyenne tronquée:</strong> Moyenne après suppression des valeurs extrêmes</li>
-                    <li><strong>IQR:</strong> Basé sur l'écart interquartile</li>
-                </ul>
                 
                 <hr>
                 
@@ -222,7 +201,6 @@ document.getElementById('analysisForm').addEventListener('submit', async functio
     e.preventDefault();
     
     const url = document.getElementById('marketUrl').value;
-    const method = document.getElementById('analysisMethod').value;
     const button = this.querySelector('button[type="submit"]');
     const originalText = button.innerHTML;
     
@@ -231,7 +209,7 @@ document.getElementById('analysisForm').addEventListener('submit', async functio
     try {
         const response = await authenticatedFetch('/api/analysis/analyze', {
             method: 'POST',
-            body: JSON.stringify({ url, method })
+            body: JSON.stringify({ url })
         });
         
         const data = await response.json();

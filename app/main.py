@@ -18,7 +18,7 @@ from app.database import engine, get_db, init_db
 from app.api import (
     auth, users, markets, stages, documents, dashboard,
     search, exports, analysis, market_planning, market_preparation,
-    validation_workflow, commission, publication, supervision
+    validation_workflow, commission, publication, supervision, deadlines
 )
 
 logger = logging.getLogger(__name__)
@@ -110,6 +110,7 @@ app.include_router(validation_workflow.router, prefix="/api/validation-workflow"
 app.include_router(commission.router, prefix="/api/commission", tags=["Commission"])
 app.include_router(publication.router, prefix="/api/publication", tags=["Publication"])
 app.include_router(supervision.router, prefix="/api/supervision", tags=["Supervision"])
+app.include_router(deadlines.router, prefix="/api/deadlines", tags=["Deadlines"])
 
 
 # ─────────────────────────────────────────────
@@ -355,6 +356,33 @@ async def supervision_page(request: Request, db: Session = Depends(get_db)):
     if not user:
         return templates.TemplateResponse("auth/login.html", {"request": request})
     return templates.TemplateResponse("supervision/dashboard.html", {"request": request, "user": user})
+
+
+@app.get("/deadlines", response_class=HTMLResponse)
+async def deadlines_page(request: Request, db: Session = Depends(get_db)):
+    """Page de gestion des délais réglementaires"""
+    user = get_current_user_or_none(request, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    return templates.TemplateResponse("deadlines/index.html", {"request": request, "user": user})
+
+
+@app.get("/deadlines/settings", response_class=HTMLResponse)
+async def deadlines_settings_page(request: Request, db: Session = Depends(get_db)):
+    """Page des paramètres des délais"""
+    user = get_current_user_or_none(request, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    return templates.TemplateResponse("deadlines/settings.html", {"request": request, "user": user})
+
+
+@app.get("/deadlines/calendar", response_class=HTMLResponse)
+async def deadlines_calendar_page(request: Request, db: Session = Depends(get_db)):
+    """Page du calendrier des délais"""
+    user = get_current_user_or_none(request, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    return templates.TemplateResponse("deadlines/calendar.html", {"request": request, "user": user})
 
 
 if __name__ == "__main__":

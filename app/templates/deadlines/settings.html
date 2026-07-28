@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Paramètres des Délais - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Paramètres des Délais Réglementaires</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="/deadlines" class="btn btn-outline-secondary">
+                <i class="bi bi-list"></i> Liste des Délais
+            </a>
+            <a href="/deadlines/calendar" class="btn btn-outline-secondary">
+                <i class="bi bi-calendar3"></i> Calendrier
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    <strong>Information :</strong> Les paramètres ci-dessous déterminent les seuils d'alerte pour chaque type de délai réglementaire. Les modifications sont appliquées automatiquement à tous les délais existants.
+</div>
+
+<!-- Tableau des paramètres -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Configuration des Seuils d'Alerte</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Type de Délai</th>
+                        <th>J1 (Normal)</th>
+                        <th>J2 (Attention)</th>
+                        <th>J3 (Important)</th>
+                        <th>Critique</th>
+                        <th>Activation</th>
+                        <th>Délai par défaut (jours)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="settingsTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center">Chargement...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modification Paramètres -->
+<div class="modal fade" id="editSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier les Paramètres</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editSettingsForm">
+                    <input type="hidden" id="editSettingsId">
+                    <input type="hidden" id="editDeadlineType">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Type de délai</label>
+                        <input type="text" class="form-control" id="editTypeName" disabled>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="editDescription" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">J1 (Normal) - jours avant échéance</label>
+                            <input type="number" class="form-control" id="editJ1" min="0">
+                            <small class="text-muted">Seuil d'alerte normale</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">J2 (Attention) - jours avant échéance</label>
+                            <input type="number" class="form-control" id="editJ2" min="0">
+                            <small class="text-muted">Seuil d'alerte attention</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">J3 (Important) - jours avant échéance</label>
+                            <input type="number" class="form-control" id="editJ3" min="0">
+                            <small class="text-muted">Seuil d'alerte importante</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Critique - jours avant échéance</label>
+                            <input type="number" class="form-control" id="editCritique" min="0">
+                            <small class="text-muted">Seuil d'alerte critique</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Délai par défaut (jours)</label>
+                            <input type="number" class="form-control" id="editDefaultDays" min="0">
+                            <small class="text-muted">Utilisé pour le calcul automatique</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Activation</label>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="editActivation">
+                                <label class="form-check-label" for="editActivation">
+                                    Activer ce type de délai
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="updateSettings()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Légende des couleurs -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Légende des Niveaux d'Alerte</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-2 text-center">
+                <div class="p-3 bg-success text-white rounded">
+                    <strong>Normal</strong>
+                </div>
+                <small class="text-muted">Délai dans les normes</small>
+            </div>
+            <div class="col-md-2 text-center">
+                <div class="p-3 bg-info text-white rounded">
+                    <strong>Attention</strong>
+                </div>
+                <small class="text-muted">Délai approchant (J2)</small>
+            </div>
+            <div class="col-md-2 text-center">
+                <div class="p-3 bg-warning text-white rounded">
+                    <strong>Important</strong>
+                </div>
+                <small class="text-muted">Délai proche (J3)</small>
+            </div>
+            <div class="col-md-2 text-center">
+                <div class="p-3 bg-danger text-white rounded">
+                    <strong>Critique</strong>
+                </div>
+                <small class="text-muted">Délai urgent</small>
+            </div>
+            <div class="col-md-2 text-center">
+                <div class="p-3 bg-secondary text-white rounded">
+                    <strong>Dépassé</strong>
+                </div>
+                <small class="text-muted">Délai expiré</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentSettings = [];
+
+// Helper function to get authentication token
+function getAuthToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; access_token=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+// Helper function to make authenticated fetch calls
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+    }, 5000);
+}
+
+// Load settings
+async function loadSettings() {
+    try {
+        const response = await authenticatedFetch('/api/deadlines/settings/');
+        const data = await response.json();
+        currentSettings = data;
+        renderSettingsTable(data);
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        document.getElementById('settingsTableBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erreur de chargement</td></tr>';
+    }
+}
+
+function renderSettingsTable(settings) {
+    const tbody = document.getElementById('settingsTableBody');
+    
+    if (settings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Aucun paramètre trouvé</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = settings.map(setting => `
+        <tr>
+            <td><strong>${setting.type_name}</strong></td>
+            <td>${setting.j1} jours</td>
+            <td>${setting.j2} jours</td>
+            <td>${setting.j3} jours</td>
+            <td>${setting.critique} jours</td>
+            <td>${setting.activation ? '<span class="badge bg-success">Activé</span>' : '<span class="badge bg-secondary">Désactivé</span>'}</td>
+            <td>${setting.default_days || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="editSettings(${setting.id})">
+                    <i class="bi bi-pencil"></i> Modifier
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Edit settings
+async function editSettings(id) {
+    const setting = currentSettings.find(s => s.id === id);
+    if (!setting) return;
+    
+    document.getElementById('editSettingsId').value = setting.id;
+    document.getElementById('editDeadlineType').value = setting.deadline_type;
+    document.getElementById('editTypeName').value = setting.type_name;
+    document.getElementById('editDescription').value = setting.description || '';
+    document.getElementById('editJ1').value = setting.j1;
+    document.getElementById('editJ2').value = setting.j2;
+    document.getElementById('editJ3').value = setting.j3;
+    document.getElementById('editCritique').value = setting.critique;
+    document.getElementById('editDefaultDays').value = setting.default_days || '';
+    document.getElementById('editActivation').checked = setting.activation;
+    
+    new bootstrap.Modal(document.getElementById('editSettingsModal')).show();
+}
+
+async function updateSettings() {
+    const id = document.getElementById('editSettingsId').value;
+    const settingsData = {
+        description: document.getElementById('editDescription').value,
+        j1: parseInt(document.getElementById('editJ1').value),
+        j2: parseInt(document.getElementById('editJ2').value),
+        j3: parseInt(document.getElementById('editJ3').value),
+        critique: parseInt(document.getElementById('editCritique').value),
+        default_days: document.getElementById('editDefaultDays').value ? parseInt(document.getElementById('editDefaultDays').value) : null,
+        activation: document.getElementById('editActivation').checked
+    };
+    
+    try {
+        const response = await authenticatedFetch(`/api/deadlines/settings/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(settingsData)
+        });
+        
+        if (response.ok) {
+            showNotification('Paramètres mis à jour avec succès. Les délais ont été recalculés.');
+            bootstrap.Modal.getInstance(document.getElementById('editSettingsModal')).hide();
+            loadSettings();
+        } else {
+            const error = await response.json();
+            showNotification(error.detail || 'Erreur lors de la mise à jour', 'danger');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de la mise à jour des paramètres', 'danger');
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadSettings();
+});
+</script>
+{% endblock %}
