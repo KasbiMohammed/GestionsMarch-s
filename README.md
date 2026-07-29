@@ -31,6 +31,8 @@ Application web moderne, professionnelle et sécurisée pour la gestion, le suiv
 - **Python-JOSE** - Gestion des tokens JWT
 - **Celery/Redis** - Tâches en arrière-plan
 - **Loguru** - Système de logging
+- **LangChain** - Framework pour l'assistant IA
+- **FAISS** - Indexation vectorielle pour la recherche sémantique
 
 ## Architecture du Projet
 
@@ -48,7 +50,16 @@ gestion-marches/
 │   │   ├── market.py          # Marchés publics
 │   │   ├── stage.py           # Étapes des marchés
 │   │   ├── document.py        # Documents et pièces jointes
-│   │   └── history.py         # Historique des modifications
+│   │   ├── history.py         # Historique des modifications
+│   │   ├── calendar.py        # Calendrier intelligent
+│   │   ├── regulatory_knowledge.py  # Base de connaissances réglementaire
+│   │   ├── chatbot.py         # Assistant IA
+│   │   ├── market_planning.py # Planification des marchés
+│   │   ├── market_preparation.py  # Préparation des marchés
+│   │   ├── commission.py      # Commissions
+│   │   ├── publication.py    # Publications
+│   │   ├── deadline.py        # Délais réglementaires
+│   │   └── notification.py    # Notifications
 │   │
 │   ├── schemas/                # Schémas Pydantic
 │   │   ├── __init__.py
@@ -66,7 +77,17 @@ gestion-marches/
 │   │   ├── documents.py       # Gestion des documents
 │   │   ├── dashboard.py       # Tableau de bord
 │   │   ├── search.py          # Recherche avancée
-│   │   └── exports.py         # Exports
+│   │   ├── exports.py         # Exports
+│   │   ├── market_planning.py # Planification
+│   │   ├── market_preparation.py  # Préparation
+│   │   ├── validation_workflow.py  # Workflow de validation
+│   │   ├── commission.py      # Commissions
+│   │   ├── publication.py    # Publications
+│   │   ├── supervision.py     # Supervision
+│   │   ├── deadlines.py       # Délais réglementaires
+│   │   ├── chatbot.py         # Assistant IA
+│   │   ├── calendar.py        # Calendrier intelligent
+│   │   └── regulatory_knowledge.py  # Base de connaissances
 │   │
 │   ├── services/               # Logique métier
 │   │   ├── __init__.py
@@ -74,7 +95,12 @@ gestion-marches/
 │   │   ├── market_service.py
 │   │   ├── stage_service.py
 │   │   ├── notification_service.py
-│   │   └── export_service.py
+│   │   ├── export_service.py
+│   │   ├── calendar_service.py  # Calendrier intelligent
+│   │   ├── regulatory_import_service.py  # Importation documents réglementaires
+│   │   ├── regulatory_search_service.py  # Recherche réglementaire
+│   │   ├── document_indexer.py  # Indexation documents
+│   │   └── chatbot_service.py  # Assistant IA
 │   │
 │   ├── scraping/               # Scraping PMMP
 │   │   ├── __init__.py
@@ -110,7 +136,10 @@ gestion-marches/
 │   │   ├── dashboard.html
 │   │   ├── markets/
 │   │   ├── stages/
-│   │   └── auth/
+│   │   ├── auth/
+│   │   ├── calendar/          # Calendrier intelligent
+│   │   ├── regulatory_knowledge/  # Base de connaissances
+│   │   └── chatbot/           # Assistant IA
 │   │
 │   └── static/                 # Fichiers statiques
 │       ├── css/
@@ -161,6 +190,33 @@ uvicorn app.main:app --reload
 L'application sera accessible sur http://localhost:8000
 
 ## Fonctionnalités Principales
+
+### Calendrier Intelligent
+- Vue mensuelle, hebdomadaire et annuelle
+- Agrégation automatique des événements depuis tous les modules
+- Suivi budgétaire annuel et mensuel (budget voté, engagé, consommé, restant)
+- Filtres avancés (année, service, responsable, procédure, statut, type d'événement)
+- Couleurs par type d'événement (13 types)
+- Navigation directe vers les fiches correspondantes
+- Graphiques de suivi budgétaire
+
+### Base de Connaissances Réglementaire
+- Importation de documents officiels (Décrets, Lois, Arrêtés, Circulaires, Notes, Guides, CCAG)
+- Indexation automatique par chapitres, articles et mots-clés
+- Recherche rapide et sémantique
+- Organisation par thème (12 thèmes : planification, préparation, publicité, commission, attribution, exécution, réception, paiement, budget, contrôle, contentieux)
+- Liens entre articles
+- Vérification de conformité réglementaire
+- API pour intégration avec modules IA
+- Système extensible pour ajouter de nouveaux textes sans modifier le code
+
+### Assistant IA (Chatbot)
+- Réponses aux questions sur les marchés publics
+- Vérification de conformité réglementaire
+- Calcul automatique des délais
+- Citation automatique des articles applicables
+- Indexation vectorielle pour recherche sémantique
+- Interface de conversation intuitive
 
 ### Gestion des Marchés
 - Création et modification de marchés publics

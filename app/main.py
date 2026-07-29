@@ -18,7 +18,7 @@ from app.database import engine, get_db, init_db
 from app.api import (
     auth, users, markets, stages, documents, dashboard,
     search, exports, analysis, market_planning, market_preparation,
-    validation_workflow, commission, publication, supervision, deadlines, chatbot
+    validation_workflow, commission, publication, supervision, deadlines, chatbot, calendar, regulatory_knowledge
 )
 
 logger = logging.getLogger(__name__)
@@ -112,6 +112,8 @@ app.include_router(publication.router, prefix="/api/publication", tags=["Publica
 app.include_router(supervision.router, prefix="/api/supervision", tags=["Supervision"])
 app.include_router(deadlines.router, prefix="/api/deadlines", tags=["Deadlines"])
 app.include_router(chatbot.router, prefix="/api/chatbot", tags=["Chatbot"])
+app.include_router(calendar.router, prefix="/api/calendar", tags=["Calendar"])
+app.include_router(regulatory_knowledge.router, prefix="/api/regulatory-knowledge", tags=["Regulatory Knowledge"])
 
 
 # ─────────────────────────────────────────────
@@ -393,6 +395,24 @@ async def chatbot_page(request: Request, db: Session = Depends(get_db)):
     if not user:
         return templates.TemplateResponse("auth/login.html", {"request": request})
     return templates.TemplateResponse("chatbot/chat.html", {"request": request, "user": user})
+
+
+@app.get("/calendar", response_class=HTMLResponse)
+async def calendar_page(request: Request, db: Session = Depends(get_db)):
+    """Page du calendrier intelligent"""
+    user = get_current_user_or_none(request, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    return templates.TemplateResponse("calendar/calendar.html", {"request": request, "user": user})
+
+
+@app.get("/regulatory-knowledge", response_class=HTMLResponse)
+async def regulatory_knowledge_page(request: Request, db: Session = Depends(get_db)):
+    """Page de la base de connaissances réglementaire"""
+    user = get_current_user_or_none(request, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    return templates.TemplateResponse("regulatory_knowledge/index.html", {"request": request, "user": user})
 
 
 if __name__ == "__main__":

@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+
+{% block title %}Base de connaissances réglementaire - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Panneau de recherche -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-search"></i> Recherche</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Rechercher</label>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Mots-clés, articles, thèmes...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Type de document</label>
+                        <select class="form-select" id="documentTypeSelect">
+                            <option value="">Tous</option>
+                            <option value="decret">Décret</option>
+                            <option value="loi">Loi</option>
+                            <option value="arrete">Arrêté</option>
+                            <option value="circulaire">Circulaire</option>
+                            <option value="note">Note</option>
+                            <option value="guide">Guide</option>
+                            <option value="ccag">CCAG</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Thème</label>
+                        <select class="form-select" id="themeSelect">
+                            <option value="">Tous</option>
+                            <option value="planification">Planification</option>
+                            <option value="preparation">Préparation</option>
+                            <option value="publicite">Publicité</option>
+                            <option value="commission">Commission</option>
+                            <option value="attribution">Attribution</option>
+                            <option value="execution">Exécution</option>
+                            <option value="reception">Réception</option>
+                            <option value="paiement">Paiement</option>
+                            <option value="budget">Budget</option>
+                            <option value="controle">Contrôle</option>
+                            <option value="contentieux">Contentieux</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn btn-primary w-100" onclick="search()">
+                        <i class="bi bi-search"></i> Rechercher
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Thèmes -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-tags"></i> Thèmes</h6>
+                </div>
+                <div class="card-body">
+                    <div id="themesContainer">
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Résultats -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-book"></i> Résultats</h5>
+                    <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="bi bi-upload"></i> Importer
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="resultsContainer">
+                        <div class="text-center py-5">
+                            <p class="text-muted">Lancez une recherche pour afficher les résultats</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Documents -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-file-text"></i> Documents réglementaires</h5>
+                </div>
+                <div class="card-body">
+                    <div id="documentsContainer">
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'importation -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importer un document réglementaire</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="importForm">
+                    <div class="mb-3">
+                        <label class="form-label">Fichier</label>
+                        <input type="file" class="form-control" id="fileInput" accept=".txt,.json,.pdf" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Type de document</label>
+                        <select class="form-select" id="importDocumentType" required>
+                            <option value="decret">Décret</option>
+                            <option value="loi">Loi</option>
+                            <option value="arrete">Arrêté</option>
+                            <option value="circulaire">Circulaire</option>
+                            <option value="note">Note</option>
+                            <option value="guide">Guide</option>
+                            <option value="ccag">CCAG</option>
+                            <option value="autre">Autre</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Référence</label>
+                        <input type="text" class="form-control" id="importReference" placeholder="ex: 2.22.431">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Titre</label>
+                        <input type="text" class="form-control" id="importTitle" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="importDescription" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Date de publication</label>
+                        <input type="date" class="form-control" id="importPublicationDate">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Autorité émettrice</label>
+                        <input type="text" class="form-control" id="importIssuer" placeholder="ex: Ministère de l'Économie">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">URL officielle</label>
+                        <input type="url" class="form-control" id="importUrl" placeholder="https://...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Mots-clés (séparés par des virgules)</label>
+                        <input type="text" class="form-control" id="importKeywords" placeholder="marché public, procédure, délai">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Thèmes (séparés par des virgules)</label>
+                        <input type="text" class="form-control" id="importThemes" placeholder="planification, préparation, publicité">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="importDocument()">Importer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de détail d'article -->
+<div class="modal fade" id="articleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="articleModalTitle">Détail de l'article</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="articleModalBody">
+                <!-- Le contenu sera généré dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.search-result {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    cursor: pointer;
+}
+.search-result:hover {
+    background-color: #f8f9fa;
+}
+.search-result:last-child {
+    border-bottom: none;
+}
+.article-number {
+    font-weight: bold;
+    color: #0d6efd;
+}
+.document-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+.theme-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    margin: 2px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.theme-tag:hover {
+    opacity: 0.8;
+}
+</style>
+
+<script>
+let articleModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    articleModal = new bootstrap.Modal(document.getElementById('articleModal'));
+    
+    // Charger les thèmes
+    loadThemes();
+    
+    // Charger les documents
+    loadDocuments();
+    
+    // Recherche sur Entrée
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            search();
+        }
+    });
+});
+
+function loadThemes() {
+    authenticatedFetch('/api/regulatory-knowledge/themes')
+        .then(response => response.json())
+        .then(themes => {
+            const container = document.getElementById('themesContainer');
+            let html = '';
+            
+            const themeLabels = {
+                'planification': 'Planification',
+                'preparation': 'Préparation',
+                'publicite': 'Publicité',
+                'commission': 'Commission',
+                'attribution': 'Attribution',
+                'execution': 'Exécution',
+                'reception': 'Réception',
+                'paiement': 'Paiement',
+                'budget': 'Budget',
+                'controle': 'Contrôle',
+                'contentieux': 'Contentieux',
+                'general': 'Général'
+            };
+            
+            const themeColors = {
+                'planification': '#6f42c1',
+                'preparation': '#0dcaf0',
+                'publicite': '#198754',
+                'commission': '#fd7e14',
+                'attribution': '#ffc107',
+                'execution': '#0d6efd',
+                'reception': '#d63384',
+                'paiement': '#20c997',
+                'budget': '#6610f2',
+                'controle': '#dc3545',
+                'contentieux': '#6c757d',
+                'general': '#adb5bd'
+            };
+            
+            themes.forEach(theme => {
+                html += `
+                    <span class="theme-tag" 
+                          style="background-color: ${themeColors[theme] || '#adb5bd'}; color: white;"
+                          onclick="searchByTheme('${theme}')">
+                        ${themeLabels[theme] || theme}
+                    </span>
+                `;
+            });
+            
+            container.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erreur chargement thèmes:', error);
+            document.getElementById('themesContainer').innerHTML = '<p class="text-muted">Erreur de chargement</p>';
+        });
+}
+
+function loadDocuments() {
+    authenticatedFetch('/api/regulatory-knowledge/documents')
+        .then(response => response.json())
+        .then(documents => {
+            const container = document.getElementById('documentsContainer');
+            
+            if (documents.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-3">Aucun document importé</p>';
+                return;
+            }
+            
+            let html = '<div class="row">';
+            documents.forEach(doc => {
+                html += `
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">${doc.title}</h6>
+                                <p class="card-text text-muted small">${doc.reference}</p>
+                                <p class="card-text small">${doc.description || ''}</p>
+                                <button class="btn btn-sm btn-primary" onclick="viewDocument(${doc.id})">
+                                    <i class="bi bi-eye"></i> Voir
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erreur chargement documents:', error);
+            document.getElementById('documentsContainer').innerHTML = '<p class="text-muted">Erreur de chargement</p>';
+        });
+}
+
+function search() {
+    const query = document.getElementById('searchInput').value;
+    const documentType = document.getElementById('documentTypeSelect').value;
+    const theme = document.getElementById('themeSelect').value;
+    
+    if (!query && !documentType && !theme) {
+        showNotification('Veuillez entrer une recherche', 'warning');
+        return;
+    }
+    
+    let url = `/api/regulatory-knowledge/search?query=${encodeURIComponent(query)}`;
+    if (documentType) url += `&document_type=${documentType}`;
+    if (theme) url += `&theme=${theme}`;
+    
+    authenticatedFetch(url)
+        .then(response => response.json())
+        .then(results => {
+            const container = document.getElementById('resultsContainer');
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-5">Aucun résultat trouvé</p>';
+                return;
+            }
+            
+            let html = '';
+            results.forEach(result => {
+                html += `
+                    <div class="search-result" onclick="viewArticle(${result.id})">
+                        <div class="d-flex justify-content-between">
+                            <span class="article-number">${result.article_number}</span>
+                            <span class="document-badge bg-secondary text-white">${result.document_reference}</span>
+                        </div>
+                        <h6 class="mt-2">${result.title || 'Sans titre'}</h6>
+                        <p class="text-muted small">${result.content}</p>
+                        <small class="text-muted">${result.document_title}</small>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erreur recherche:', error);
+            showNotification('Erreur lors de la recherche', 'danger');
+        });
+}
+
+function searchByTheme(theme) {
+    document.getElementById('themeSelect').value = theme;
+    search();
+}
+
+function viewDocument(documentId) {
+    authenticatedFetch(`/api/regulatory-knowledge/documents/${documentId}`)
+        .then(response => response.json())
+        .then(document => {
+            document.getElementById('articleModalTitle').textContent = document.title;
+            
+            let html = `
+                <div class="mb-3">
+                    <strong>Référence:</strong> ${document.reference}
+                </div>
+                <div class="mb-3">
+                    <strong>Type:</strong> ${document.document_type}
+                </div>
+                <div class="mb-3">
+                    <strong>Description:</strong> ${document.description || 'N/A'}
+                </div>
+                <div class="mb-3">
+                    <strong>Date de publication:</strong> ${document.publication_date || 'N/A'}
+                </div>
+                <div class="mb-3">
+                    <strong>Autorité:</strong> ${document.issuer || 'N/A'}
+                </div>
+            `;
+            
+            if (document.url) {
+                html += `
+                    <div class="mb-3">
+                        <a href="${document.url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-link-45deg"></i> Lien officiel
+                        </a>
+                    </div>
+                `;
+            }
+            
+            // Chapitres
+            if (document.chapters && document.chapters.length > 0) {
+                html += '<h6 class="mt-4">Chapitres</h6>';
+                document.chapters.forEach(chapter => {
+                    html += `
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <h6>${chapter.chapter_number ? chapter.chapter_number + ' - ' : ''}${chapter.title}</h6>
+                                ${chapter.articles ? chapter.articles.map(art => `
+                                    <div class="small p-2 bg-light rounded mb-1" style="cursor: pointer;" onclick="showArticleContent('${art.content}')">
+                                        <strong>${art.article_number}</strong> - ${art.title || 'Sans titre'}
+                                    </div>
+                                `).join('') : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Articles sans chapitre
+            if (document.orphan_articles && document.orphan_articles.length > 0) {
+                html += '<h6 class="mt-4">Articles</h6>';
+                document.orphan_articles.forEach(article => {
+                    html += `
+                        <div class="small p-2 bg-light rounded mb-1" style="cursor: pointer;" onclick="showArticleContent('${article.content.replace(/'/g, "\\'")}')">
+                            <strong>${article.article_number}</strong> - ${article.title || 'Sans titre'}
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('articleModalBody').innerHTML = html;
+            articleModal.show();
+        })
+        .catch(error => {
+            console.error('Erreur chargement document:', error);
+            showNotification('Erreur lors du chargement du document', 'danger');
+        });
+}
+
+function viewArticle(articleId) {
+    authenticatedFetch(`/api/regulatory-knowledge/articles/${articleId}`)
+        .then(response => response.json())
+        .then(article => {
+            document.getElementById('articleModalTitle').textContent = `${article.article_number} - ${article.title || 'Sans titre'}`;
+            
+            let html = `
+                <div class="mb-3">
+                    <strong>Document:</strong> ${article.document.title} (${article.document.reference})
+                </div>
+                <div class="mb-3">
+                    <strong>Chapitre:</strong> ${article.chapter ? article.chapter.title : 'N/A'}
+                </div>
+                <div class="mb-3">
+                    <strong>Contenu:</strong>
+                    <div class="p-3 bg-light rounded mt-2">
+                        ${article.content}
+                    </div>
+                </div>
+            `;
+            
+            if (article.related_articles && article.related_articles.length > 0) {
+                html += '<h6 class="mt-4">Articles liés</h6>';
+                article.related_articles.forEach(related => {
+                    html += `
+                        <div class="small p-2 bg-light rounded mb-1" style="cursor: pointer;" onclick="viewArticle(${related.id})">
+                            <strong>${related.article_number}</strong> - ${related.title} (${related.link_type})
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('articleModalBody').innerHTML = html;
+            articleModal.show();
+        })
+        .catch(error => {
+            console.error('Erreur chargement article:', error);
+            showNotification('Erreur lors du chargement de l\'article', 'danger');
+        });
+}
+
+function showArticleContent(content) {
+    document.getElementById('articleModalTitle').textContent = 'Contenu de l\'article';
+    document.getElementById('articleModalBody').innerHTML = `
+        <div class="p-3 bg-light rounded">
+            ${content}
+        </div>
+    `;
+    articleModal.show();
+}
+
+function importDocument() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showNotification('Veuillez sélectionner un fichier', 'warning');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('document_type', document.getElementById('importDocumentType').value);
+    formData.append('reference', document.getElementById('importReference').value);
+    formData.append('title', document.getElementById('importTitle').value);
+    formData.append('description', document.getElementById('importDescription').value);
+    formData.append('publication_date', document.getElementById('importPublicationDate').value);
+    formData.append('issuer', document.getElementById('importIssuer').value);
+    formData.append('url', document.getElementById('importUrl').value);
+    formData.append('keywords', document.getElementById('importKeywords').value);
+    formData.append('themes', document.getElementById('importThemes').value);
+    
+    showNotification('Importation en cours...', 'info');
+    
+    authenticatedFetch('/api/regulatory-knowledge/documents/import', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        showNotification(data.message, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('importModal')).hide();
+        document.getElementById('importForm').reset();
+        loadDocuments();
+    })
+    .catch(error => {
+        console.error('Erreur importation:', error);
+        showNotification('Erreur lors de l\'importation', 'danger');
+    });
+}
+</script>
+{% endblock %}

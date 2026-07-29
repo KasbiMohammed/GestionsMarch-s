@@ -18,7 +18,7 @@ from app.models.chatbot import (
 from app.models.user import User
 from app.api.auth import get_current_user
 
-router = APIRouter(prefix="/api/chatbot", tags=["Chatbot"])
+router = APIRouter(tags=["Chatbot"])
 
 
 # ============================================
@@ -138,14 +138,22 @@ def send_message(
     """
     Envoie un message et reçoit une réponse du chatbot
     """
-    content = message_data.get('content')
+    content = message_data.get('message') or message_data.get('content')
     if not content:
         raise HTTPException(status_code=400, detail="Le contenu du message est requis")
     
-    chatbot_service = ChatbotService(db)
-    response = chatbot_service.process_message(session_id, current_user.id, content)
-    
-    return response
+    try:
+        chatbot_service = ChatbotService(db)
+        response = chatbot_service.process_message(session_id, current_user.id, content)
+        
+        # Vérifier s'il y a une erreur
+        if 'error' in response:
+            raise HTTPException(status_code=400, detail=response['error'])
+        
+        return response
+    except Exception as e:
+        print(f"Erreur lors du traitement du message: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors du traitement: {str(e)}")
 
 
 # ============================================
@@ -177,7 +185,7 @@ def get_knowledge_base(
         "id": d.id,
         "document_type": d.document_type,
         "title": d.title,
-        "description": d.description,
+        "content": d.content,
         "source": d.source,
         "category": d.category,
         "tags": d.tags,
@@ -207,7 +215,6 @@ def get_knowledge_document(
         "id": doc.id,
         "document_type": doc.document_type,
         "title": doc.title,
-        "description": doc.description,
         "content": doc.content,
         "source": doc.source,
         "category": doc.category,

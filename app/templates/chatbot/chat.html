@@ -9,9 +9,11 @@
         <div class="col-md-3 mb-4">
             <div class="card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Sessions</h5>
-                    <button class="btn btn-sm btn-light" onclick="createNewSession()">
-                        <i class="bi bi-plus"></i> Nouvelle
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-dots" aria-hidden="true"></i> Sessions
+                    </h5>
+                    <button class="btn btn-sm btn-light" onclick="createNewSession()" title="Nouvelle session">
+                        <i class="bi bi-plus" aria-hidden="true"></i> Nouvelle
                     </button>
                 </div>
                 <div class="card-body p-0">
@@ -20,41 +22,47 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Statistiques de l'index -->
             <div class="card mt-3">
                 <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-database"></i> Base de connaissances</h6>
+                    <h6 class="mb-0">
+                        <i class="bi bi-database" aria-hidden="true"></i> Base de connaissances
+                    </h6>
                 </div>
                 <div class="card-body">
                     <div id="indexStats">
                         <div class="text-center">
-                            <div class="spinner-border text-primary" role="status"></div>
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Chargement…</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Zone de conversation -->
         <div class="col-md-9">
             <div class="card h-100">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="mb-0"><i class="bi bi-robot"></i> Assistant IA Marchés Publics</h5>
+                        <h5 class="mb-0">
+                            <i class="bi bi-robot" aria-hidden="true"></i> Assistant IA Marchés Publics
+                        </h5>
                         <small class="text-white-50">Spécialisé dans la réglementation marocaine des marchés publics</small>
                     </div>
                     <div>
-                        <button class="btn btn-sm btn-outline-light" onclick="loadIndexStats()">
-                            <i class="bi bi-arrow-clockwise"></i> Actualiser
+                        <button class="btn btn-sm btn-outline-light" onclick="loadIndexStats()" title="Actualiser les statistiques">
+                            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Actualiser
                         </button>
                     </div>
                 </div>
                 <div class="card-body p-0">
                     <!-- Messages -->
-                    <div id="chatMessages" class="chat-container p-3" style="height: 500px; overflow-y: auto;">
-                        <div class="text-center text-muted py-5">
-                            <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+                    <div id="chatMessages" class="chat-container p-3" style="height: 500px; overflow-y: auto;" aria-live="polite" aria-atomic="false">
+                        <div class="text-center text-muted py-5" id="chatPlaceholder">
+                            <i class="bi bi-chat-dots" style="font-size: 3rem;" aria-hidden="true"></i>
                             <p class="mt-3">Commencez une conversation en posant une question sur les marchés publics</p>
                             <div class="mt-3">
                                 <small class="text-muted">Exemples de questions :</small>
@@ -72,24 +80,26 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Zone de saisie -->
                     <div class="border-top p-3">
                         <div class="input-group">
-                            <input 
-                                type="text" 
-                                class="form-control" 
-                                id="messageInput" 
-                                placeholder="Posez votre question sur les marchés publics..."
-                                onkeypress="handleKeyPress(event)"
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="messageInput"
+                                placeholder="Posez votre question sur les marchés publics…"
+                                aria-label="Message à envoyer"
+                                autocomplete="off"
                             >
-                            <button class="btn btn-primary" onclick="sendMessage()">
-                                <i class="bi bi-send"></i> Envoyer
+                            <button class="btn btn-primary" type="button" id="sendBtn" onclick="sendMessage()">
+                                <i class="bi bi-send" aria-hidden="true"></i>
+                                <span id="sendBtnText">Envoyer</span>
                             </button>
                         </div>
                         <div class="mt-2">
                             <small class="text-muted">
-                                <i class="bi bi-info-circle"></i> 
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
                                 Le chatbot peut répondre sur la réglementation (Décret 2-22-431), les données de l'ERP et l'utilisation de l'application.
                             </small>
                         </div>
@@ -101,30 +111,30 @@
 </div>
 
 <!-- Modal de feedback -->
-<div class="modal fade" id="feedbackModal" tabindex="-1">
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Feedback sur la réponse</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="feedbackMessageId">
                 <div class="mb-3">
                     <label class="form-label">Cette réponse était-elle utile ?</label>
                     <div>
-                        <button class="btn btn-outline-success me-2" onclick="setFeedback(true)">
-                            <i class="bi bi-hand-thumbs-up"></i> Oui
+                        <button type="button" class="btn btn-outline-success me-2" id="fbYes" onclick="setFeedback(true)">
+                            <i class="bi bi-hand-thumbs-up" aria-hidden="true"></i> Oui
                         </button>
-                        <button class="btn btn-outline-danger" onclick="setFeedback(false)">
-                            <i class="bi bi-hand-thumbs-down"></i> Non
+                        <button type="button" class="btn btn-outline-danger" id="fbNo" onclick="setFeedback(false)">
+                            <i class="bi bi-hand-thumbs-down" aria-hidden="true"></i> Non
                         </button>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Note (1-5)</label>
+                    <label class="form-label" for="feedbackRating">Note (1-5)</label>
                     <select class="form-select" id="feedbackRating">
-                        <option value="">Sélectionner...</option>
+                        <option value="">Sélectionner…</option>
                         <option value="1">1 - Très mauvaise</option>
                         <option value="2">2 - Mauvaise</option>
                         <option value="3">3 - Moyenne</option>
@@ -133,7 +143,7 @@
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Commentaire (optionnel)</label>
+                    <label class="form-label" for="feedbackComment">Commentaire (optionnel)</label>
                     <textarea class="form-control" id="feedbackComment" rows="3"></textarea>
                 </div>
             </div>
@@ -152,6 +162,7 @@
 .message {
     margin-bottom: 15px;
     max-width: 80%;
+    animation: fadeIn 0.3s ease-in;
 }
 .message-user {
     margin-left: auto;
@@ -163,6 +174,7 @@
     padding: 12px 16px;
     border-radius: 12px;
     word-wrap: break-word;
+    white-space: pre-wrap;
 }
 .message-user .message-content {
     background-color: #0d6efd;
@@ -184,6 +196,7 @@
 .typing-indicator {
     display: flex;
     gap: 4px;
+    padding: 8px 0;
 }
 .typing-indicator span {
     width: 8px;
@@ -192,349 +205,515 @@
     border-radius: 50%;
     animation: typing 1.4s infinite;
 }
-.typing-indicator span:nth-child(2) {
-    animation-delay: 0.2s;
-}
-.typing-indicator span:nth-child(3) {
-    animation-delay: 0.4s;
-}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes typing {
     0%, 60%, 100% { transform: translateY(0); }
     30% { transform: translateY(-4px); }
 }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
 </style>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-let currentSessionId = null;
-let feedbackModal;
+(function() {
+    'use strict';
 
-document.addEventListener('DOMContentLoaded', function() {
-    feedbackModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
-    loadSessions();
-    loadIndexStats();
-});
+    // ─────────────────────────────────────────
+    // Utilitaires de sécurité & DOM
+    // ─────────────────────────────────────────
+    function escapeHtml(text) {
+        if (text == null) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
 
-function loadSessions() {
-    authenticatedFetch('/api/chatbot/sessions')
-        .then(response => response.json())
-        .then(sessions => {
-            const sessionsList = document.getElementById('sessionsList');
-            sessionsList.innerHTML = '';
-            
-            if (sessions.length === 0) {
-                sessionsList.innerHTML = '<div class="p-3 text-center text-muted">Aucune session</div>';
+    function getAuthToken() {
+        const value = '; ' + document.cookie;
+        const parts = value.split('; access_token=');
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getAuthToken();
+        const headers = {
+            'Accept': 'application/json',
+            ...options.headers
+        };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        if (options.body && typeof options.body === 'string' && !headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        try {
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401) {
+                window.location.href = '/';
+                return Promise.reject(new Error('Session expirée'));
+            }
+            return response;
+        } catch (err) {
+            showNotification('Erreur réseau : ' + err.message, 'danger');
+            throw err;
+        }
+    }
+
+    // ─────────────────────────────────────────
+    // État
+    // ─────────────────────────────────────────
+    let currentSessionId = null;
+    let isSending = false;
+    let typingIndicatorEl = null;
+    let feedbackModal = null;
+    let feedbackHelpful = null; // null | true | false
+
+    // ─────────────────────────────────────────
+    // Initialisation
+    // ─────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+        feedbackModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('feedbackModal'));
+        document.getElementById('messageInput').addEventListener('keydown', handleKeyDown);
+        loadSessions();
+        loadIndexStats();
+    });
+
+    // ─────────────────────────────────────────
+    // Sessions
+    // ─────────────────────────────────────────
+    async function loadSessions() {
+        const list = document.getElementById('sessionsList');
+        try {
+            const response = await authenticatedFetch('/api/chatbot/sessions');
+            if (!response.ok) throw new Error('Erreur ' + response.status);
+            const sessions = await response.json();
+
+            list.innerHTML = '';
+            if (!sessions || sessions.length === 0) {
+                list.innerHTML = '<div class="p-3 text-center text-muted">Aucune session</div>';
                 return;
             }
-            
+
+            const frag = document.createDocumentFragment();
             sessions.forEach(session => {
                 const isActive = session.id === currentSessionId;
-                const activeClass = isActive ? 'active' : '';
-                const date = new Date(session.updated_at).toLocaleDateString('fr-FR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                
-                sessionsList.innerHTML += `
-                    <button 
-                        class="list-group-item list-group-item-action ${activeClass}"
-                        onclick="loadSession(${session.id})"
-                    >
-                        <div class="d-flex w-100 justify-content-between">
-                            <small class="fw-bold">${session.session_name}</small>
-                            <small class="text-muted">${date}</small>
-                        </div>
-                    </button>
-                `;
-            });
-        })
-        .catch(error => {
-            console.error('Erreur chargement sessions:', error);
-        });
-}
-
-function createNewSession() {
-    authenticatedFetch('/api/chatbot/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-    })
-    .then(response => response.json())
-    .then(session => {
-        currentSessionId = session.id;
-        loadSessions();
-        loadMessages();
-    })
-    .catch(error => {
-        console.error('Erreur création session:', error);
-        showNotification('Erreur lors de la création de la session', 'danger');
-    });
-}
-
-function loadSession(sessionId) {
-    currentSessionId = sessionId;
-    loadSessions();
-    loadMessages();
-}
-
-function loadMessages() {
-    if (!currentSessionId) {
-        document.getElementById('chatMessages').innerHTML = `
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
-                <p class="mt-3">Sélectionnez ou créez une session pour commencer</p>
-            </div>
-        `;
-        return;
-    }
-    
-    authenticatedFetch(`/api/chatbot/sessions/${currentSessionId}/messages`)
-        .then(response => response.json())
-        .then(messages => {
-            const chatContainer = document.getElementById('chatMessages');
-            chatContainer.innerHTML = '';
-            
-            if (messages.length === 0) {
-                chatContainer.innerHTML = `
-                    <div class="text-center text-muted py-5">
-                        <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
-                        <p class="mt-3">Posez votre première question</p>
+                const btn = document.createElement('button');
+                btn.className = 'list-group-item list-group-item-action' + (isActive ? ' active' : '');
+                btn.type = 'button';
+                const dateStr = session.updated_at
+                    ? new Date(session.updated_at).toLocaleDateString('fr-FR', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                      })
+                    : '';
+                btn.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <small class="fw-bold">${escapeHtml(session.session_name || 'Session #' + session.id)}</small>
+                        <small class="text-muted">${escapeHtml(dateStr)}</small>
                     </div>
                 `;
-                return;
-            }
-            
-            messages.forEach(msg => {
-                appendMessage(msg);
+                btn.onclick = () => loadSession(session.id);
+                frag.appendChild(btn);
             });
-            
-            // Scroll to bottom
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        })
-        .catch(error => {
-            console.error('Erreur chargement messages:', error);
-        });
-}
-
-function appendMessage(msg) {
-    const chatContainer = document.getElementById('chatMessages');
-    const isUser = msg.message_type === 'user';
-    
-    let sourcesHtml = '';
-    if (msg.sources && msg.sources.length > 0) {
-        sourcesHtml = '<div class="mt-2">';
-        msg.sources.forEach(source => {
-            const badgeClass = source.type === 'database' ? 'bg-info' : 
-                              source.type === 'knowledge' ? 'bg-success' : 
-                              source.type === 'assistance' ? 'bg-warning' : 'bg-secondary';
-            const label = source.type === 'database' ? 'Base de données' :
-                         source.type === 'knowledge' ? 'Connaissances' :
-                         source.type === 'assistance' ? 'Assistance' : source.type;
-            sourcesHtml += `<span class="badge ${badgeClass} source-badge">${label}</span>`;
-        });
-        sourcesHtml += '</div>';
+            list.appendChild(frag);
+        } catch (err) {
+            console.error('Erreur chargement sessions:', err);
+            list.innerHTML = '<div class="p-3 text-center text-danger">Erreur de chargement</div>';
+        }
     }
-    
-    let feedbackHtml = '';
-    if (!isUser) {
-        feedbackHtml = `
-            <div class="mt-2">
-                <button class="btn btn-sm btn-outline-secondary" onclick="openFeedbackModal(${msg.id})">
-                    <i class="bi bi-hand-thumbs-up"></i> Feedback
-                </button>
+
+    async function createNewSession() {
+        try {
+            const response = await authenticatedFetch('/api/chatbot/sessions', {
+                method: 'POST',
+                body: JSON.stringify({})
+            });
+            if (!response.ok) throw new Error('Erreur ' + response.status);
+            const session = await response.json();
+            currentSessionId = session.id;
+            loadSessions();
+            clearChat();
+        } catch (err) {
+            console.error('Erreur création session:', err);
+            showNotification('Erreur lors de la création de la session', 'danger');
+        }
+    }
+
+    function loadSession(sessionId) {
+        currentSessionId = sessionId;
+        loadSessions();
+        loadMessages();
+    }
+
+    function clearChat() {
+        const container = document.getElementById('chatMessages');
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-chat-dots" style="font-size: 3rem;" aria-hidden="true"></i>
+                <p class="mt-3">Posez votre première question</p>
             </div>
         `;
     }
-    
-    const messageHtml = `
-        <div class="message ${isUser ? 'message-user' : 'message-assistant'}">
-            <div class="message-content">
-                ${formatMessage(msg.content)}
-                ${sourcesHtml}
-                ${feedbackHtml}
-            </div>
-            <div class="message-meta">
-                ${new Date(msg.created_at).toLocaleTimeString('fr-FR')}
-                ${msg.confidence ? ` • Confiance: ${Math.round(msg.confidence * 100)}%` : ''}
-            </div>
-        </div>
-    `;
-    
-    chatContainer.innerHTML += messageHtml;
-}
 
-function formatMessage(content) {
-    // Convertir les sauts de ligne en <br>
-    return content.replace(/\n/g, '<br>');
-}
-
-function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const message = input.value.trim();
-    
-    if (!message || !currentSessionId) {
+    // ─────────────────────────────────────────
+    // Messages
+    // ─────────────────────────────────────────
+    async function loadMessages() {
+        const container = document.getElementById('chatMessages');
         if (!currentSessionId) {
-            createNewSession();
+            clearChat();
+            return;
         }
-        return;
+
+        try {
+            const response = await authenticatedFetch(`/api/chatbot/sessions/${currentSessionId}/messages`);
+            if (!response.ok) throw new Error('Erreur ' + response.status);
+            const messages = await response.json();
+
+            container.innerHTML = '';
+            if (!messages || messages.length === 0) {
+                clearChat();
+                return;
+            }
+
+            messages.forEach(msg => appendMessage(msg));
+            scrollToBottom();
+        } catch (err) {
+            console.error('Erreur chargement messages:', err);
+            container.innerHTML = '<div class="p-3 text-center text-danger">Impossible de charger les messages</div>';
+        }
     }
-    
-    input.value = '';
-    
-    // Afficher le message utilisateur
-    appendMessage({
-        message_type: 'user',
-        content: message,
-        created_at: new Date().toISOString()
-    });
-    
-    // Afficher l'indicateur de frappe
-    showTypingIndicator();
-    
-    // Envoyer le message
-    authenticatedFetch(`/api/chatbot/sessions/${currentSessionId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: message })
-    })
-    .then(response => response.json())
-    .then(response => {
-        hideTypingIndicator();
-        appendMessage({
-            message_type: 'assistant',
-            content: response.content,
-            sources: response.sources,
-            confidence: response.confidence,
-            sql_query: response.sql_query,
-            created_at: new Date().toISOString()
-        });
-        
-        // Scroll to bottom
-        const chatContainer = document.getElementById('chatMessages');
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    })
-    .catch(error => {
-        hideTypingIndicator();
-        console.error('Erreur envoi message:', error);
-        showNotification('Erreur lors de l\'envoi du message', 'danger');
-    });
-}
 
-function sendExample(message) {
-    document.getElementById('messageInput').value = message;
-    sendMessage();
-}
+    function appendMessage(msg) {
+        const container = document.getElementById('chatMessages');
+        // Supprimer le placeholder s'il existe
+        const placeholder = document.getElementById('chatPlaceholder');
+        if (placeholder) placeholder.remove();
 
-function handleKeyPress(event) {
-    if (event.key === 'Enter') {
+        const isUser = msg.message_type === 'user';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message ' + (isUser ? 'message-user' : 'message-assistant');
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        contentDiv.innerHTML = formatMessage(msg.content);
+
+        // Sources
+        if (!isUser && msg.sources && msg.sources.length > 0) {
+            const sourcesDiv = document.createElement('div');
+            sourcesDiv.className = 'mt-2';
+            msg.sources.forEach(source => {
+                const badge = document.createElement('span');
+                badge.className = 'badge source-badge ' + getSourceBadgeClass(source.type);
+                badge.textContent = getSourceLabel(source.type);
+                sourcesDiv.appendChild(badge);
+            });
+            contentDiv.appendChild(sourcesDiv);
+        }
+
+        // Feedback button (assistant only)
+        if (!isUser && msg.id) {
+            const fbDiv = document.createElement('div');
+            fbDiv.className = 'mt-2';
+            const fbBtn = document.createElement('button');
+            fbBtn.className = 'btn btn-sm btn-outline-secondary';
+            fbBtn.innerHTML = '<i class="bi bi-hand-thumbs-up" aria-hidden="true"></i> Feedback';
+            fbBtn.onclick = () => openFeedbackModal(msg.id);
+            fbDiv.appendChild(fbBtn);
+            contentDiv.appendChild(fbDiv);
+        }
+
+        wrapper.appendChild(contentDiv);
+
+        // Meta
+        const meta = document.createElement('div');
+        meta.className = 'message-meta';
+        const timeStr = msg.created_at
+            ? new Date(msg.created_at).toLocaleTimeString('fr-FR')
+            : '';
+        let metaText = timeStr;
+        if (!isUser && msg.confidence != null) {
+            metaText += ' • Confiance: ' + Math.round(msg.confidence * 100) + '%';
+        }
+        meta.textContent = metaText;
+        wrapper.appendChild(meta);
+
+        container.appendChild(wrapper);
+    }
+
+    function formatMessage(text) {
+        if (!text) return '';
+        // Échapper d'abord, puis remplacer les sauts de ligne par <br>
+        return escapeHtml(text).replace(/\n/g, '<br>');
+    }
+
+    function getSourceBadgeClass(type) {
+        switch (type) {
+            case 'database': return 'bg-info';
+            case 'knowledge': return 'bg-success';
+            case 'assistance': return 'bg-warning text-dark';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function getSourceLabel(type) {
+        switch (type) {
+            case 'database': return 'Base de données';
+            case 'knowledge': return 'Connaissances';
+            case 'assistance': return 'Assistance';
+            default: return type;
+        }
+    }
+
+    // ─────────────────────────────────────────
+    // Envoi
+    // ─────────────────────────────────────────
+    function handleKeyDown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+        if (!text || isSending) return;
+
+        if (!currentSessionId) {
+            createNewSessionAndSend(text);
+            return;
+        }
+        sendToChatbot(text);
+    }
+
+    function sendExample(text) {
+        document.getElementById('messageInput').value = text;
         sendMessage();
     }
-}
 
-function showTypingIndicator() {
-    const chatContainer = document.getElementById('chatMessages');
-    chatContainer.innerHTML += `
-        <div class="message message-assistant" id="typingIndicator">
+    async function createNewSessionAndSend(text) {
+        try {
+            const response = await authenticatedFetch('/api/chatbot/sessions', {
+                method: 'POST',
+                body: JSON.stringify({})
+            });
+            if (!response.ok) throw new Error('Erreur ' + response.status);
+            const session = await response.json();
+            currentSessionId = session.id;
+            loadSessions();
+            sendToChatbot(text);
+        } catch (err) {
+            console.error('Erreur création session:', err);
+            showNotification('Erreur lors de la création de la session', 'danger');
+        }
+    }
+
+    async function sendToChatbot(text) {
+        if (isSending) return;
+        isSending = true;
+        setSendLoading(true);
+
+        const input = document.getElementById('messageInput');
+        input.value = '';
+
+        // Afficher immédiatement le message utilisateur
+        appendMessage({
+            message_type: 'user',
+            content: text,
+            created_at: new Date().toISOString()
+        });
+        scrollToBottom();
+        showTypingIndicator();
+
+        try {
+            // ⚠️  CLÉ CORRIGÉE : "message" au lieu de "content"
+            const response = await authenticatedFetch(`/api/chatbot/sessions/${currentSessionId}/messages`, {
+                method: 'POST',
+                body: JSON.stringify({ message: text })
+            });
+
+            hideTypingIndicator();
+
+            if (!response.ok) {
+                let detail = 'Erreur lors de l\'envoi du message';
+                try {
+                    const ct = response.headers.get('content-type') || '';
+                    if (ct.includes('application/json')) {
+                        const err = await response.json();
+                        detail = err.detail || err.message || JSON.stringify(err);
+                    } else {
+                        detail = 'Erreur serveur (' + response.status + ')';
+                    }
+                } catch (_) { /* ignore */ }
+                throw new Error(detail);
+            }
+
+            const data = await response.json();
+            appendMessage({
+                message_type: 'assistant',
+                content: data.content,
+                sources: data.sources,
+                confidence: data.confidence,
+                sql_query: data.sql_query,
+                id: data.message_id,
+                created_at: new Date().toISOString()
+            });
+            scrollToBottom();
+
+        } catch (err) {
+            hideTypingIndicator();
+            console.error('Erreur envoi message:', err);
+            showNotification(err.message || 'Erreur lors de l\'envoi du message', 'danger');
+
+            appendMessage({
+                message_type: 'assistant',
+                content: 'Désolé, une erreur s\'est produite lors du traitement de votre message. Veuillez réessayer.',
+                created_at: new Date().toISOString()
+            });
+            scrollToBottom();
+        } finally {
+            isSending = false;
+            setSendLoading(false);
+            input.focus();
+        }
+    }
+
+    function setSendLoading(loading) {
+        const btn = document.getElementById('sendBtn');
+        const txt = document.getElementById('sendBtnText');
+        const input = document.getElementById('messageInput');
+        btn.disabled = loading;
+        input.disabled = loading;
+        txt.innerHTML = loading
+            ? '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Envoi…'
+            : 'Envoyer';
+    }
+
+    function showTypingIndicator() {
+        if (typingIndicatorEl) return; // éviter les doublons
+        const container = document.getElementById('chatMessages');
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message message-assistant';
+        wrapper.id = 'typingIndicator';
+        wrapper.innerHTML = `
             <div class="message-content">
                 <div class="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                    <span></span><span></span><span></span>
                 </div>
             </div>
-        </div>
-    `;
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-}
-
-function hideTypingIndicator() {
-    const indicator = document.getElementById('typingIndicator');
-    if (indicator) {
-        indicator.remove();
+        `;
+        container.appendChild(wrapper);
+        typingIndicatorEl = wrapper;
+        scrollToBottom();
     }
-}
 
-function loadIndexStats() {
-    const statsContainer = document.getElementById('indexStats');
-    statsContainer.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
-    
-    authenticatedFetch('/api/chatbot/index/statistics')
-        .then(response => response.json())
-        .then(stats => {
-            statsContainer.innerHTML = `
+    function hideTypingIndicator() {
+        if (typingIndicatorEl) {
+            typingIndicatorEl.remove();
+            typingIndicatorEl = null;
+        }
+    }
+
+    function scrollToBottom() {
+        const container = document.getElementById('chatMessages');
+        requestAnimationFrame(() => {
+            container.scrollTop = container.scrollHeight;
+        });
+    }
+
+    // ─────────────────────────────────────────
+    // Statistiques
+    // ─────────────────────────────────────────
+    async function loadIndexStats() {
+        const container = document.getElementById('indexStats');
+        container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement…</span></div></div>';
+
+        try {
+            const response = await authenticatedFetch('/api/chatbot/index/statistics');
+            if (!response.ok) throw new Error('Erreur ' + response.status);
+            const stats = await response.json();
+
+            const byType = stats.by_type || {};
+            let typeHtml = '';
+            for (const [type, count] of Object.entries(byType)) {
+                typeHtml += `
+                    <div class="d-flex justify-content-between">
+                        <span>${escapeHtml(type)}</span>
+                        <span>${escapeHtml(String(count))}</span>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
                 <div class="mb-2">
                     <small class="text-muted">Documents réglementaires</small>
-                    <div class="fw-bold">${stats.total_knowledge_base || 0}</div>
+                    <div class="fw-bold">${escapeHtml(String(stats.total_knowledge_base || 0))}</div>
                 </div>
                 <div class="mb-2">
                     <small class="text-muted">Documents internes</small>
-                    <div class="fw-bold">${stats.total_documents || 0}</div>
+                    <div class="fw-bold">${escapeHtml(String(stats.total_documents || 0))}</div>
                 </div>
                 <div>
                     <small class="text-muted">Par type</small>
-                    <div class="small">
-                        ${Object.entries(stats.by_type || {}).map(([type, count]) => `
-                            <div class="d-flex justify-content-between">
-                                <span>${type}</span>
-                                <span>${count}</span>
-                            </div>
-                        `).join('')}
-                    </div>
+                    <div class="small">${typeHtml || '<span class="text-muted">Aucun</span>'}</div>
                 </div>
             `;
-        })
-        .catch(error => {
-            console.error('Erreur chargement stats:', error);
-            statsContainer.innerHTML = '<div class="text-danger">Erreur de chargement</div>';
-        });
-}
-
-function openFeedbackModal(messageId) {
-    document.getElementById('feedbackMessageId').value = messageId;
-    document.getElementById('feedbackRating').value = '';
-    document.getElementById('feedbackComment').value = '';
-    feedbackModal.show();
-}
-
-function setFeedback(isHelpful) {
-    // Mettre en surbrillance le bouton sélectionné
-    const buttons = document.querySelectorAll('#feedbackModal .btn-outline-success, #feedbackModal .btn-outline-danger');
-    buttons.forEach(btn => btn.classList.remove('active'));
-    
-    if (isHelpful) {
-        document.querySelector('#feedbackModal .btn-outline-success').classList.add('active');
-    } else {
-        document.querySelector('#feedbackModal .btn-outline-danger').classList.add('active');
+        } catch (err) {
+            console.error('Erreur chargement stats:', err);
+            container.innerHTML = '<div class="text-danger">Erreur de chargement</div>';
+        }
     }
-}
 
-function submitFeedback() {
-    const messageId = document.getElementById('feedbackMessageId').value;
-    const rating = document.getElementById('feedbackRating').value;
-    const comment = document.getElementById('feedbackComment').value;
-    
-    const isHelpful = document.querySelector('#feedbackModal .btn-outline-success.active') !== null;
-    
-    authenticatedFetch('/api/chatbot/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            message_id: messageId,
-            rating: rating ? parseInt(rating) : null,
-            is_helpful: isHelpful,
-            comment: comment
-        })
-    })
-    .then(response => response.json())
-    .then(() => {
-        feedbackModal.hide();
-        showNotification('Feedback enregistré avec succès', 'success');
-    })
-    .catch(error => {
-        console.error('Erreur feedback:', error);
-        showNotification('Erreur lors de l\'enregistrement du feedback', 'danger');
-    });
-}
+    // ─────────────────────────────────────────
+    // Feedback
+    // ─────────────────────────────────────────
+    function openFeedbackModal(messageId) {
+        document.getElementById('feedbackMessageId').value = messageId;
+        document.getElementById('feedbackRating').value = '';
+        document.getElementById('feedbackComment').value = '';
+        document.getElementById('fbYes').classList.remove('active');
+        document.getElementById('fbNo').classList.remove('active');
+        feedbackHelpful = null;
+        feedbackModal.show();
+    }
+
+    function setFeedback(isHelpful) {
+        feedbackHelpful = isHelpful;
+        document.getElementById('fbYes').classList.toggle('active', isHelpful === true);
+        document.getElementById('fbNo').classList.toggle('active', isHelpful === false);
+    }
+
+    async function submitFeedback() {
+        const messageId = document.getElementById('feedbackMessageId').value;
+        const ratingVal = document.getElementById('feedbackRating').value;
+        const comment = document.getElementById('feedbackComment').value.trim();
+
+        const payload = {
+            message_id: parseInt(messageId, 10),
+            rating: ratingVal ? parseInt(ratingVal, 10) : null,
+            is_helpful: feedbackHelpful,
+            comment: comment || null
+        };
+
+        try {
+            const response = await authenticatedFetch('/api/chatbot/feedback', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error('Erreur ' + response.status);
+            feedbackModal.hide();
+            showNotification('Feedback enregistré avec succès', 'success');
+        } catch (err) {
+            console.error('Erreur feedback:', err);
+            showNotification('Erreur lors de l\'enregistrement du feedback', 'danger');
+        }
+    }
+})();
 </script>
 {% endblock %}

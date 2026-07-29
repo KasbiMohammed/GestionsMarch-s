@@ -1,0 +1,827 @@
+{% extends "base.html" %}
+
+{% block title %}Calendrier Intelligent - Gestion des Marchés Publics{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Filtres et contrôles -->
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-calendar3"></i> Calendrier Intelligent</h5>
+                        <div>
+                            <button class="btn btn-sm btn-light" onclick="syncEvents()">
+                                <i class="bi bi-arrow-clockwise"></i> Synchroniser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Vue -->
+                        <div class="col-md-2">
+                            <label class="form-label">Vue</label>
+                            <select class="form-select" id="viewSelect" onchange="changeView()">
+                                <option value="month">Mensuelle</option>
+                                <option value="week">Hebdomadaire</option>
+                                <option value="year">Annuelle</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Année -->
+                        <div class="col-md-2">
+                            <label class="form-label">Année</label>
+                            <select class="form-select" id="yearSelect" onchange="loadCalendar()">
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026" selected>2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Mois (pour vue mensuelle) -->
+                        <div class="col-md-2" id="monthFilter">
+                            <label class="form-label">Mois</label>
+                            <select class="form-select" id="monthSelect" onchange="loadCalendar()">
+                                <option value="1">Janvier</option>
+                                <option value="2">Février</option>
+                                <option value="3">Mars</option>
+                                <option value="4">Avril</option>
+                                <option value="5">Mai</option>
+                                <option value="6">Juin</option>
+                                <option value="7">Juillet</option>
+                                <option value="8">Août</option>
+                                <option value="9">Septembre</option>
+                                <option value="10">Octobre</option>
+                                <option value="11">Novembre</option>
+                                <option value="12">Décembre</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Service -->
+                        <div class="col-md-2">
+                            <label class="form-label">Service</label>
+                            <select class="form-select" id="serviceSelect" onchange="loadCalendar()">
+                                <option value="">Tous</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Responsable -->
+                        <div class="col-md-2">
+                            <label class="form-label">Responsable</label>
+                            <select class="form-select" id="responsibleSelect" onchange="loadCalendar()">
+                                <option value="">Tous</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Type d'événement -->
+                        <div class="col-md-2">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" id="eventTypeSelect" onchange="loadCalendar()">
+                                <option value="">Tous</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Calendrier -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0" id="calendarTitle">Calendrier</h6>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="previousPeriod()">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="nextPeriod()">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="calendarContainer" style="min-height: 500px;">
+                        <!-- Le calendrier sera rendu ici -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Suivi budgétaire -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-graph-up"></i> Suivi Budgétaire</h6>
+                </div>
+                <div class="card-body">
+                    <div id="budgetSummary">
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6 class="mb-3">Répartition mensuelle</h6>
+                        <canvas id="budgetChart" height="200"></canvas>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6 class="mb-3">Par procédure</h6>
+                        <canvas id="procedureChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Légende -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Légende des types d'événements</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2" id="legendContainer">
+                        <!-- La légende sera générée ici -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de détail d'événement -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalTitle">Détail de l'événement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="eventModalBody">
+                <!-- Le contenu sera généré dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" id="eventModalAction">Voir la fiche</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.calendar-day {
+    border: 1px solid #dee2e6;
+    min-height: 100px;
+    padding: 5px;
+    position: relative;
+}
+.calendar-day:hover {
+    background-color: #f8f9fa;
+}
+.calendar-day-header {
+    background-color: #f8f9fa;
+    padding: 5px;
+    font-weight: bold;
+    text-align: center;
+}
+.calendar-event {
+    padding: 2px 5px;
+    margin: 2px 0;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.calendar-event:hover {
+    opacity: 0.8;
+}
+.month-view {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+.week-view {
+    display: grid;
+    grid-template-columns: 80px repeat(7, 1fr);
+}
+.year-view {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+.year-month {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px;
+}
+.year-month-header {
+    background-color: #f8f9fa;
+    padding: 5px;
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px;
+    border-radius: 3px;
+}
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+}
+</style>
+
+<script>
+let currentView = 'month';
+let currentYear = 2026;
+let currentMonth = new Date().getMonth() + 1;
+let currentWeek = null;
+let events = [];
+let budgetData = null;
+let budgetChart = null;
+let procedureChart = null;
+let eventModal;
+
+const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+const EVENT_COLORS = {
+    'plannification': '#6f42c1',
+    'preparation': '#0dcaf0',
+    'publication': '#198754',
+    'commission': '#fd7e14',
+    'ouverture_plis': '#ffc107',
+    'attribution': '#20c997',
+    'notification': '#dc3545',
+    'ordre_service': '#6610f2',
+    'execution': '#0d6efd',
+    'reception': '#d63384',
+    'alerte': '#dc3545',
+    'delai': '#6c757d',
+    'autre': '#adb5bd'
+};
+
+const EVENT_LABELS = {
+    'plannification': 'Planification',
+    'preparation': 'Préparation',
+    'publication': 'Publication',
+    'commission': 'Commission',
+    'ouverture_plis': 'Ouverture des plis',
+    'attribution': 'Attribution',
+    'notification': 'Notification',
+    'ordre_service': 'Ordre de service',
+    'execution': 'Exécution',
+    'reception': 'Réception',
+    'alerte': 'Alerte',
+    'delai': 'Délai',
+    'autre': 'Autre'
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
+    
+    // Initialiser les sélecteurs
+    document.getElementById('monthSelect').value = currentMonth;
+    
+    // Charger les filtres
+    loadFilters();
+    
+    // Charger le calendrier
+    loadCalendar();
+    
+    // Charger le budget
+    loadBudget();
+    
+    // Générer la légende
+    generateLegend();
+});
+
+function loadFilters() {
+    // Charger les services
+    authenticatedFetch('/api/calendar/filters/services')
+        .then(response => response.json())
+        .then(services => {
+            const select = document.getElementById('serviceSelect');
+            select.innerHTML = '<option value="">Tous</option>';
+            services.forEach(s => {
+                select.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+        });
+    
+    // Charger les responsables
+    authenticatedFetch('/api/calendar/filters/responsibles')
+        .then(response => response.json())
+        .then(responsibles => {
+            const select = document.getElementById('responsibleSelect');
+            select.innerHTML = '<option value="">Tous</option>';
+            responsibles.forEach(r => {
+                select.innerHTML += `<option value="${r}">${r}</option>`;
+            });
+        });
+    
+    // Charger les types d'événements
+    authenticatedFetch('/api/calendar/filters/event-types')
+        .then(response => response.json())
+        .then(types => {
+            const select = document.getElementById('eventTypeSelect');
+            select.innerHTML = '<option value="">Tous</option>';
+            types.forEach(t => {
+                select.innerHTML += `<option value="${t}">${EVENT_LABELS[t] || t}</option>`;
+            });
+        });
+}
+
+function loadCalendar() {
+    const view = document.getElementById('viewSelect').value;
+    const year = parseInt(document.getElementById('yearSelect').value);
+    const month = parseInt(document.getElementById('monthSelect').value);
+    const service = document.getElementById('serviceSelect').value;
+    const responsible = document.getElementById('responsibleSelect').value;
+    const eventType = document.getElementById('eventTypeSelect').value;
+    
+    currentView = view;
+    currentYear = year;
+    currentMonth = month;
+    
+    // Calculer les dates
+    let startDate, endDate;
+    if (view === 'month') {
+        startDate = new Date(year, month - 1, 1);
+        endDate = new Date(year, month, 0);
+    } else if (view === 'week') {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - dayOfWeek);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+    } else if (view === 'year') {
+        startDate = new Date(year, 0, 1);
+        endDate = new Date(year, 11, 31);
+    }
+    
+    // Charger les événements
+    let url = `/api/calendar/events?start_date=${startDate.toISOString()}&end_date=${endDate.toISOString()}`;
+    if (service) url += `&service=${service}`;
+    if (responsible) url += `&responsible=${responsible}`;
+    if (eventType) url += `&event_type=${eventType}`;
+    
+    authenticatedFetch(url)
+        .then(response => response.json())
+        .then(data => {
+            events = data;
+            renderCalendar();
+        })
+        .catch(error => {
+            console.error('Erreur chargement événements:', error);
+        });
+    
+    // Mettre à jour le titre
+    updateTitle();
+}
+
+function renderCalendar() {
+    const container = document.getElementById('calendarContainer');
+    
+    if (currentView === 'month') {
+        renderMonthView(container);
+    } else if (currentView === 'week') {
+        renderWeekView(container);
+    } else if (currentView === 'year') {
+        renderYearView(container);
+    }
+}
+
+function renderMonthView(container) {
+    const year = currentYear;
+    const month = currentMonth;
+    
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    const startDayOfWeek = firstDay.getDay();
+    const totalDays = lastDay.getDate();
+    
+    let html = '<div class="month-view">';
+    
+    // En-têtes des jours
+    DAY_NAMES.forEach(day => {
+        html += `<div class="calendar-day-header">${day}</div>`;
+    });
+    
+    // Jours vides avant le premier jour du mois
+    for (let i = 0; i < startDayOfWeek; i++) {
+        html += '<div class="calendar-day" style="background-color: #f8f9fa;"></div>';
+    }
+    
+    // Jours du mois
+    for (let day = 1; day <= totalDays; day++) {
+        const date = new Date(year, month - 1, day);
+        const dateStr = date.toISOString().split('T')[0];
+        const dayEvents = events.filter(e => {
+            const eventDate = e.start_date.split('T')[0];
+            return eventDate === dateStr;
+        });
+        
+        html += `<div class="calendar-day">`;
+        html += `<div style="font-weight: bold; margin-bottom: 5px;">${day}</div>`;
+        
+        dayEvents.forEach(event => {
+            html += `<div class="calendar-event" 
+                        style="background-color: ${event.color}; color: white;"
+                        onclick="showEventDetail(${JSON.stringify(event).replace(/"/g, '&quot;')})">
+                        ${event.title}
+                    </div>`;
+        });
+        
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function renderWeekView(container) {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - dayOfWeek);
+    
+    let html = '<div class="week-view">';
+    
+    // En-tête avec heures
+    html += '<div></div>';
+    DAY_NAMES.forEach(day => {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + DAY_NAMES.indexOf(day));
+        html += `<div class="calendar-day-header">${day}<br><small>${date.getDate()}/${date.getMonth() + 1}</small></div>`;
+    });
+    
+    // Heures de la journée
+    for (let hour = 8; hour <= 18; hour++) {
+        html += `<div style="padding: 5px; text-align: center; border-bottom: 1px solid #dee2e6;">${hour}:00</div>`;
+        
+        for (let day = 0; day < 7; day++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + day);
+            const dateStr = date.toISOString().split('T')[0];
+            const hourEvents = events.filter(e => {
+                const eventDate = e.start_date.split('T')[0];
+                const eventHour = new Date(e.start_date).getHours();
+                return eventDate === dateStr && eventHour === hour;
+            });
+            
+            html += `<div class="calendar-day" style="min-height: 40px;">`;
+            hourEvents.forEach(event => {
+                html += `<div class="calendar-event" 
+                            style="background-color: ${event.color}; color: white;"
+                            onclick="showEventDetail(${JSON.stringify(event).replace(/"/g, '&quot;')})">
+                            ${event.title}
+                        </div>`;
+            });
+            html += '</div>';
+        }
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function renderYearView(container) {
+    let html = '<div class="year-view">';
+    
+    for (let month = 1; month <= 12; month++) {
+        const monthEvents = events.filter(e => {
+            const eventDate = new Date(e.start_date);
+            return eventDate.getMonth() + 1 === month && eventDate.getFullYear() === currentYear;
+        });
+        
+        html += `<div class="year-month">`;
+        html += `<div class="year-month-header">${MONTH_NAMES[month - 1]}</div>`;
+        html += `<div style="font-size: 0.75rem;">${monthEvents.length} événements</div>`;
+        
+        monthEvents.slice(0, 5).forEach(event => {
+            html += `<div class="calendar-event" 
+                        style="background-color: ${event.color}; color: white;"
+                        onclick="showEventDetail(${JSON.stringify(event).replace(/"/g, '&quot;')})">
+                        ${event.title}
+                    </div>`;
+        });
+        
+        if (monthEvents.length > 5) {
+            html += `<div style="font-size: 0.75rem; color: #6c757d;">+${monthEvents.length - 5} autres</div>`;
+        }
+        
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function updateTitle() {
+    const title = document.getElementById('calendarTitle');
+    if (currentView === 'month') {
+        title.textContent = `${MONTH_NAMES[currentMonth - 1]} ${currentYear}`;
+    } else if (currentView === 'week') {
+        title.textContent = `Semaine - ${currentYear}`;
+    } else if (currentView === 'year') {
+        title.textContent = `Année ${currentYear}`;
+    }
+}
+
+function changeView() {
+    const view = document.getElementById('viewSelect').value;
+    const monthFilter = document.getElementById('monthFilter');
+    
+    if (view === 'month') {
+        monthFilter.style.display = 'block';
+    } else {
+        monthFilter.style.display = 'none';
+    }
+    
+    loadCalendar();
+}
+
+function previousPeriod() {
+    if (currentView === 'month') {
+        currentMonth--;
+        if (currentMonth < 1) {
+            currentMonth = 12;
+            currentYear--;
+        }
+        document.getElementById('monthSelect').value = currentMonth;
+        document.getElementById('yearSelect').value = currentYear;
+    } else if (currentView === 'year') {
+        currentYear--;
+        document.getElementById('yearSelect').value = currentYear;
+    }
+    loadCalendar();
+}
+
+function nextPeriod() {
+    if (currentView === 'month') {
+        currentMonth++;
+        if (currentMonth > 12) {
+            currentMonth = 1;
+            currentYear++;
+        }
+        document.getElementById('monthSelect').value = currentMonth;
+        document.getElementById('yearSelect').value = currentYear;
+    } else if (currentView === 'year') {
+        currentYear++;
+        document.getElementById('yearSelect').value = currentYear;
+    }
+    loadCalendar();
+}
+
+function loadBudget() {
+    const year = currentYear;
+    const service = document.getElementById('serviceSelect').value;
+    
+    let url = `/api/calendar/budget/annual/${year}`;
+    if (service) url += `?service=${service}`;
+    
+    authenticatedFetch(url)
+        .then(response => response.json())
+        .then(data => {
+            budgetData = data;
+            renderBudgetSummary();
+            renderBudgetChart();
+            renderProcedureChart();
+        })
+        .catch(error => {
+            console.error('Erreur chargement budget:', error);
+        });
+}
+
+function renderBudgetSummary() {
+    const container = document.getElementById('budgetSummary');
+    
+    const percentageVoted = budgetData.budget_voted > 0 ? 
+        ((budgetData.budget_engaged / budgetData.budget_voted) * 100).toFixed(1) : 0;
+    const percentageConsumed = budgetData.budget_voted > 0 ? 
+        ((budgetData.budget_consumed / budgetData.budget_voted) * 100).toFixed(1) : 0;
+    
+    container.innerHTML = `
+        <div class="mb-3">
+            <small class="text-muted">Budget voté</small>
+            <div class="fw-bold fs-5">${formatAmount(budgetData.budget_voted)}</div>
+        </div>
+        <div class="mb-3">
+            <small class="text-muted">Budget engagé</small>
+            <div class="d-flex justify-content-between">
+                <span class="fw-bold">${formatAmount(budgetData.budget_engaged)}</span>
+                <span class="text-muted">${percentageVoted}%</span>
+            </div>
+            <div class="progress" style="height: 10px;">
+                <div class="progress-bar bg-info" style="width: ${percentageVoted}%"></div>
+            </div>
+        </div>
+        <div class="mb-3">
+            <small class="text-muted">Budget consommé</small>
+            <div class="d-flex justify-content-between">
+                <span class="fw-bold">${formatAmount(budgetData.budget_consumed)}</div>
+                <span class="text-muted">${percentageConsumed}%</span>
+            </div>
+            <div class="progress" style="height: 10px;">
+                <div class="progress-bar bg-success" style="width: ${percentageConsumed}%"></div>
+            </div>
+        </div>
+        <div>
+            <small class="text-muted">Budget restant</small>
+            <div class="fw-bold fs-5 text-primary">${formatAmount(budgetData.budget_remaining)}</div>
+        </div>
+    `;
+}
+
+function renderBudgetChart() {
+    const ctx = document.getElementById('budgetChart').getContext('2d');
+    
+    authenticatedFetch(`/api/calendar/budget/monthly/${currentYear}`)
+        .then(response => response.json())
+        .then(data => {
+            if (budgetChart) {
+                budgetChart.destroy();
+            }
+            
+            budgetChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => MONTH_NAMES[d.month - 1]),
+                    datasets: [{
+                        label: 'Budget voté',
+                        data: data.map(d => d.budget_voted),
+                        backgroundColor: 'rgba(13, 110, 253, 0.5)',
+                        borderColor: 'rgba(13, 110, 253, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Budget engagé',
+                        data: data.map(d => d.budget_engaged),
+                        backgroundColor: 'rgba(13, 202, 240, 0.5)',
+                        borderColor: 'rgba(13, 202, 240, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+}
+
+function renderProcedureChart() {
+    const ctx = document.getElementById('procedureChart').getContext('2d');
+    
+    if (budgetData.procedure_breakdown) {
+        if (procedureChart) {
+            procedureChart.destroy();
+        }
+        
+        procedureChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(budgetData.procedure_breakdown),
+                datasets: [{
+                    data: Object.values(budgetData.procedure_breakdown),
+                    backgroundColor: [
+                        '#6f42c1', '#0dcaf0', '#198754', '#fd7e14', '#ffc107',
+                        '#20c997', '#dc3545', '#6610f2', '#0d6efd', '#d63384'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+}
+
+function generateLegend() {
+    const container = document.getElementById('legendContainer');
+    let html = '';
+    
+    Object.entries(EVENT_LABELS).forEach(([type, label]) => {
+        html += `
+            <div class="col-md-3 col-sm-4 col-6">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: ${EVENT_COLORS[type]};"></div>
+                    <small>${label}</small>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function showEventDetail(event) {
+    document.getElementById('eventModalTitle').textContent = event.title;
+    
+    let html = `
+        <div class="mb-3">
+            <strong>Type:</strong> ${EVENT_LABELS[event.event_type] || event.event_type}
+        </div>
+        <div class="mb-3">
+            <strong>Date:</strong> ${new Date(event.start_date).toLocaleDateString('fr-FR')}
+            ${event.end_date ? ` - ${new Date(event.end_date).toLocaleDateString('fr-FR')}` : ''}
+        </div>
+    `;
+    
+    if (event.description) {
+        html += `<div class="mb-3"><strong>Description:</strong><br>${event.description}</div>`;
+    }
+    
+    if (event.service) {
+        html += `<div class="mb-3"><strong>Service:</strong> ${event.service}</div>`;
+    }
+    
+    if (event.responsible) {
+        html += `<div class="mb-3"><strong>Responsable:</strong> ${event.responsible}</div>`;
+    }
+    
+    if (event.procedure) {
+        html += `<div class="mb-3"><strong>Procédure:</strong> ${event.procedure}</div>`;
+    }
+    
+    if (event.status) {
+        html += `<div class="mb-3"><strong>Statut:</strong> ${event.status}</div>`;
+    }
+    
+    document.getElementById('eventModalBody').innerHTML = html;
+    
+    // Configurer le bouton d'action
+    const actionBtn = document.getElementById('eventModalAction');
+    actionBtn.onclick = () => openEntityFiche(event);
+    
+    eventModal.show();
+}
+
+function openEntityFiche(event) {
+    eventModal.hide();
+    
+    // Rediriger vers la fiche correspondante selon le type d'entité
+    if (event.source_module === 'market') {
+        window.location.href = `/markets/${event.source_entity_id}`;
+    } else if (event.source_module === 'market_planning') {
+        window.location.href = `/planification/${event.source_entity_id}`;
+    } else if (event.source_module === 'stage') {
+        window.location.href = `/markets/${event.metadata?.market_id}`;
+    } else if (event.source_module === 'commission') {
+        window.location.href = `/commissions/${event.source_entity_id}`;
+    } else if (event.source_module === 'publication') {
+        window.location.href = `/publications/${event.source_entity_id}`;
+    } else if (event.source_module === 'deadline') {
+        window.location.href = `/deadlines`;
+    } else {
+        showNotification('Fiche non disponible pour ce type d\'événement', 'warning');
+    }
+}
+
+function syncEvents() {
+    showNotification('Synchronisation en cours...', 'info');
+    
+    authenticatedFetch('/api/calendar/events/sync', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        showNotification(data.message, 'success');
+        loadCalendar();
+    })
+    .catch(error => {
+        console.error('Erreur synchronisation:', error);
+        showNotification('Erreur lors de la synchronisation', 'danger');
+    });
+}
+
+function formatAmount(amount) {
+    return new Intl.NumberFormat('fr-MA', {
+        style: 'currency',
+        currency: 'MAD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount || 0);
+}
+</script>
+{% endblock %}
