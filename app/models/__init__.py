@@ -21,6 +21,16 @@ from app.models.market_preparation import (
     PreparationAlert,
     PreparationStatus
 )
+from app.models.validation_workflow import (
+    ValidationWorkflow,
+    ValidationRecord,
+    ValidationChecklist,
+    ValidationHistory,
+    ValidationAlert,
+    ValidationStep,
+    ValidationDecision,
+    WorkflowStatus
+)
 from app.models.procurement_rules import (
     ProcurementRule, ProcurementDecision, ProcurementMethod, MarketNature
 )
@@ -33,6 +43,17 @@ from app.models.commission import (
     CommissionStatus,
     SessionStatus,
     MemberRole
+)
+from app.models.publication import (
+    Publication,
+    PublicationSupport,
+    PublicationDeadline,
+    PublicationAlert,
+    PublicationHistory,
+    PublicationType,
+    PublicationStatus,
+    ProcedureType,
+    SupportType
 )
 from app.models.offer_management import (
     PMMPPublication, Offer, OfferDocument,

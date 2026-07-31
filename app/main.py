@@ -147,6 +147,16 @@ async def markets_page(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("markets/list.html", {"request": request, "user": user})
 
 
+@app.get("/markets/new", response_class=HTMLResponse)
+async def market_new_page(request: Request, db: Session = Depends(get_db)):
+    """Page de création d'un marché"""
+    user = get_current_user_or_none(request, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request})
+    # Rediriger vers la liste avec un paramètre pour ouvrir le modal de création
+    return RedirectResponse(url="/markets?mode=new", status_code=302)
+
+
 @app.get("/markets/{market_id}", response_class=HTMLResponse)
 async def market_detail_page(request: Request, market_id: int, db: Session = Depends(get_db)):
     """Page de détail d'un marché"""
@@ -160,9 +170,58 @@ async def market_detail_page(request: Request, market_id: int, db: Session = Dep
     if not market:
         return RedirectResponse(url="/markets", status_code=302)
 
+    # Convertir l'objet SQLAlchemy en dict pour éviter les problèmes Jinja2
+    market_dict = {
+        'id': market.id,
+        'market_number': market.market_number,
+        'object': market.object,
+        'master_of_work': market.master_of_work,
+        'market_type': market.market_type.value if market.market_type else None,
+        'procurement_method': market.procurement_method.value if market.procurement_method else None,
+        'estimated_amount': market.estimated_amount,
+        'definitive_amount': market.definitive_amount,
+        'budget': market.budget,
+        'credits': market.credits,
+        'responsible_service': market.responsible_service,
+        'follow_up_responsible': market.follow_up_responsible,
+        'publication_date': market.publication_date,
+        'opening_date': market.opening_date,
+        'attribution_date': market.attribution_date,
+        'notification_date': market.notification_date,
+        'start_date': market.start_date,
+        'provisional_acceptance_date': market.provisional_acceptance_date,
+        'definitive_acceptance_date': market.definitive_acceptance_date,
+        'expected_end_date': market.expected_end_date,
+        'actual_end_date': market.actual_end_date,
+        'status': market.status.value if market.status else None,
+        'progress_percentage': market.progress_percentage,
+        'participating_companies_count': market.participating_companies_count,
+        'observations': market.observations,
+        'comments': market.comments,
+        'companies': [
+            {
+                'id': c.id,
+                'name': c.name,
+                'rc_number': c.rc_number,
+                'if_number': c.if_number,
+                'address': c.address,
+                'phone': c.phone,
+                'email': c.email,
+                'offer_amount': c.offer_amount,
+                'offer_rank': c.offer_rank,
+                'is_attributed': c.is_attributed,
+                'technical_score': c.technical_score,
+                'financial_score': c.financial_score,
+                'total_score': c.total_score,
+                'observations': c.observations
+            }
+            for c in market.companies
+        ]
+    }
+
     return templates.TemplateResponse(
         "markets/detail.html",
-        {"request": request, "user": user, "market": market}
+        {"request": request, "user": user, "market": market_dict}
     )
 
 

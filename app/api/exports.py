@@ -230,6 +230,58 @@ async def export_planning_excel(
     )
 
 
+@router.get("/market-planning/pdf")
+async def export_plannings_pdf(
+    fiscal_year: Optional[int] = None,
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Exporte les planifications en PDF
+    
+    Args:
+        fiscal_year: Année fiscale optionnelle
+        status: Statut optionnel
+        current_user: Utilisateur actuel
+        db: Session de base de données
+        
+    Returns:
+        Fichier PDF
+    """
+    if not can_export_data(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to export data"
+        )
+    
+    # Construire la requête
+    query = db.query(MarketPlanning)
+    
+    if fiscal_year:
+        query = query.filter(MarketPlanning.fiscal_year == fiscal_year)
+    if status:
+        query = query.filter(MarketPlanning.status == status)
+    
+    plannings = query.all()
+    
+    # Générer le fichier PDF
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"planifications_export_{timestamp}.pdf"
+    filepath = os.path.join("exports", filename)
+    
+    os.makedirs("exports", exist_ok=True)
+    
+    from app.exports.pdf_export import export_plannings_to_pdf
+    export_plannings_to_pdf(plannings, filepath)
+    
+    return FileResponse(
+        path=filepath,
+        filename=filename,
+        media_type="application/pdf"
+    )
+
+
 @router.get("/market-planning/{planning_id}/pdf")
 async def export_planning_pdf(
     planning_id: int,

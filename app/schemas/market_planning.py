@@ -42,16 +42,16 @@ class MarketPlanningBase(BaseModel):
     fiscal_year: int = Field(..., ge=2000, le=2100)
     title: str = Field(..., min_length=3, max_length=300)
     description: Optional[str] = None
-    project_type: ProjectType
-    procedure_type: ProcedureType
-    estimated_budget: float = Field(..., ge=0)
+    project_type: Optional[ProjectType] = None
+    procedure_type: Optional[ProcedureType] = None
+    estimated_budget: Optional[float] = Field(None, ge=0)
     funding_source: Optional[str] = Field(None, max_length=200)
     requesting_service_id: Optional[int] = None
     requesting_service_name: Optional[str] = Field(None, max_length=200)
     responsible_id: Optional[int] = None
     responsible_name: Optional[str] = Field(None, max_length=200)
-    priority: PlanningPriority = PlanningPriority.MOYENNE
-    status: MarketPlanningStatus = MarketPlanningStatus.BROUILLON
+    priority: Optional[PlanningPriority] = None
+    status: Optional[MarketPlanningStatus] = None
     launch_date: Optional[datetime] = None
     bid_opening_date: Optional[datetime] = None
     attribution_date: Optional[datetime] = None

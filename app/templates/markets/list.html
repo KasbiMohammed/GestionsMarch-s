@@ -359,6 +359,15 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
 });
 
 // Initial load
-document.addEventListener('DOMContentLoaded', () => loadMarkets(1));
+document.addEventListener('DOMContentLoaded', () => {
+    loadMarkets(1);
+    
+    // Check if mode=new is in URL to open the modal
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mode') === 'new') {
+        const modal = new bootstrap.Modal(document.getElementById('newMarketModal'));
+        modal.show();
+    }
+});
 </script>
 {% endblock %}

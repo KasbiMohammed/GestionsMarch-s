@@ -489,6 +489,7 @@ function getAuthToken() {
 
 async function authenticatedFetch(url, options = {}) {
     const token = getAuthToken();
+    console.log('Token:', token ? 'Present' : 'Missing');
     const headers = {
         'Content-Type': 'application/json',
         ...options.headers
@@ -497,13 +498,17 @@ async function authenticatedFetch(url, options = {}) {
         headers['Authorization'] = 'Bearer ' + token;
     }
     try {
+        console.log('Fetching:', url);
         const response = await fetch(url, { ...options, headers });
+        console.log('Response status:', response.status);
         if (response.status === 401) {
+            console.error('Unauthorized - redirecting to login');
             window.location.href = '/';
             return Promise.reject(new Error('Session expirée'));
         }
         return response;
     } catch (err) {
+        console.error('Network error:', err);
         showNotification('Erreur réseau : ' + err.message, 'danger');
         throw err;
     }
@@ -589,31 +594,47 @@ async function loadUsers() {
 // ─────────────────────────────────────────
 async function loadPlannings() {
     try {
-        const params = new URLSearchParams({
-            skip: String((currentPage - 1) * pageSize),
-            limit: String(pageSize),
-            search: document.getElementById('searchInput').value,
-            fiscal_year: document.getElementById('fiscalYearFilter').value,
-            project_type: document.getElementById('projectTypeFilter').value,
-            procedure_type: document.getElementById('procedureTypeFilter').value,
-            status: document.getElementById('statusFilter').value,
-            priority: document.getElementById('priorityFilter').value,
-            requesting_service_id: document.getElementById('serviceFilter').value,
-            sort_by: document.getElementById('sortBy').value,
-            sort_order: document.getElementById('sortOrder').value
-        });
+        const search = document.getElementById('searchInput').value;
+        const fiscal_year = document.getElementById('fiscalYearFilter').value;
+        const project_type = document.getElementById('projectTypeFilter').value;
+        const procedure_type = document.getElementById('procedureTypeFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const priority = document.getElementById('priorityFilter').value;
+        const requesting_service_id = document.getElementById('serviceFilter').value;
+        const sort_by = document.getElementById('sortBy').value;
+        const sort_order = document.getElementById('sortOrder').value;
 
+        const params = new URLSearchParams();
+        params.append('skip', String((currentPage - 1) * pageSize));
+        params.append('limit', String(pageSize));
+        
+        if (search) params.append('search', search);
+        if (fiscal_year) params.append('fiscal_year', fiscal_year);
+        if (project_type) params.append('project_type', project_type);
+        if (procedure_type) params.append('procedure_type', procedure_type);
+        if (status) params.append('status', status);
+        if (priority) params.append('priority', priority);
+        if (requesting_service_id) params.append('requesting_service_id', requesting_service_id);
+        if (sort_by) params.append('sort_by', sort_by);
+        if (sort_order) params.append('sort_order', sort_order);
+
+        console.log('Loading plannings with params:', params.toString());
         const response = await authenticatedFetch('/api/market-planning/?' + params);
+        console.log('Response status:', response.status);
+        
         if (!response.ok) {
+            console.error('Error response:', response.status, response.statusText);
             showNotification('Erreur lors du chargement des planifications', 'danger');
             return;
         }
 
         const data = await response.json();
+        console.log('Received data:', data);
         displayPlannings(data.items);
         updatePagination(data.total, data.page, data.page_size, data.total_pages);
     } catch (error) {
         console.error('Erreur planifications:', error);
+        showNotification('Erreur lors du chargement des planifications: ' + error.message, 'danger');
     }
 }
 
@@ -752,10 +773,23 @@ function goToPage(page) {
 // ─────────────────────────────────────────
 async function loadStatistics() {
     try {
-        const response = await authenticatedFetch('/api/market-planning/statistics');
-        if (!response.ok) return;
+        const fiscalYear = document.getElementById('fiscalYearFilter').value;
+        let url = '/api/market-planning/statistics';
+        if (fiscalYear) {
+            url += '?fiscal_year=' + fiscalYear;
+        }
+        
+        console.log('Loading statistics:', url);
+        const response = await authenticatedFetch(url);
+        console.log('Statistics response status:', response.status);
+        
+        if (!response.ok) {
+            console.error('Error loading statistics:', response.status);
+            return;
+        }
 
         const stats = await response.json();
+        console.log('Statistics data:', stats);
         document.getElementById('totalCount').textContent = stats.total_count ?? '-';
         document.getElementById('totalBudget').textContent = formatAmount(stats.total_budget);
         document.getElementById('validatedCount').textContent = stats.by_status?.validee ?? 0;
@@ -852,18 +886,24 @@ async function savePlanning() {
         const url = isUpdate ? '/api/market-planning/' + planningId : '/api/market-planning/';
         const method = isUpdate ? 'PUT' : 'POST';
 
+        console.log('Saving planning:', { url, method, data });
         const response = await authenticatedFetch(url, {
             method: method,
             body: JSON.stringify(data)
         });
 
+        console.log('Save response status:', response.status);
+        
         if (response.ok) {
+            console.log('Save successful');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('planningModal')).hide();
             loadPlannings();
             loadStatistics();
             showNotification(isUpdate ? 'Planification modifiée avec succès' : 'Planification créée avec succès', 'success');
         } else {
+            console.error('Save failed with status:', response.status);
             const error = await response.json().catch(() => ({ detail: 'Erreur lors de l\'enregistrement' }));
+            console.error('Error details:', error);
             showNotification(error.detail || 'Erreur lors de l\'enregistrement', 'danger');
         }
     } catch (error) {
@@ -1075,16 +1115,20 @@ function exportPDF() {
 // Fonctions utilitaires locales
 // ─────────────────────────────────────────
 function getProjectTypeLabel(type) {
+    if (!type) return '-';
     const labels = {
         'travaux': 'Travaux',
         'fournitures': 'Fournitures',
         'services': 'Services',
         'prestations_intellectuelles': 'Prestations intellectuelles'
     };
-    return labels[type] || type;
+    // Handle both string and enum object
+    const typeValue = typeof type === 'object' ? type.value : type;
+    return labels[typeValue] || typeValue || type;
 }
 
 function getProcedureTypeLabel(type) {
+    if (!type) return '-';
     const labels = {
         'bon_commande': 'Bon de commande',
         'marche_simplifie': 'Marché simplifié',
@@ -1093,20 +1137,26 @@ function getProcedureTypeLabel(type) {
         'consultation': 'Consultation',
         'procedure_negociee': 'Procédure négociée'
     };
-    return labels[type] || type;
+    // Handle both string and enum object
+    const typeValue = typeof type === 'object' ? type.value : type;
+    return labels[typeValue] || typeValue || type;
 }
 
 function getPriorityLabel(priority) {
+    if (!priority) return '-';
     const labels = {
         'faible': 'Faible',
         'moyenne': 'Moyenne',
         'haute': 'Haute',
         'urgente': 'Urgente'
     };
-    return labels[priority] || priority;
+    // Handle both string and enum object
+    const priorityValue = typeof priority === 'object' ? priority.value : priority;
+    return labels[priorityValue] || priorityValue || priority;
 }
 
 function getStatusLabel(status) {
+    if (!status) return '-';
     const labels = {
         'brouillon': 'Brouillon',
         'en_preparation': 'En préparation',
@@ -1114,20 +1164,26 @@ function getStatusLabel(status) {
         'programmee': 'Programmée',
         'annulee': 'Annulée'
     };
-    return labels[status] || status;
+    // Handle both string and enum object
+    const statusValue = typeof status === 'object' ? status.value : status;
+    return labels[statusValue] || statusValue || status;
 }
 
 function getPriorityColor(priority) {
+    if (!priority) return 'secondary';
     const colors = {
         'faible': 'info',
         'moyenne': 'primary',
         'haute': 'warning',
         'urgente': 'danger'
     };
-    return colors[priority] || 'secondary';
+    // Handle both string and enum object
+    const priorityValue = typeof priority === 'object' ? priority.value : priority;
+    return colors[priorityValue] || 'secondary';
 }
 
 function getStatusColor(status) {
+    if (!status) return 'secondary';
     const colors = {
         'brouillon': 'secondary',
         'en_preparation': 'info',
@@ -1135,7 +1191,9 @@ function getStatusColor(status) {
         'programmee': 'primary',
         'annulee': 'danger'
     };
-    return colors[status] || 'secondary';
+    // Handle both string and enum object
+    const statusValue = typeof status === 'object' ? status.value : status;
+    return colors[statusValue] || 'secondary';
 }
 
 function formatFileSize(bytes) {

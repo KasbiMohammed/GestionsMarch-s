@@ -477,6 +477,99 @@ def export_planning_to_pdf(planning: MarketPlanning, filepath: str):
     doc.build(story)
 
 
+def export_plannings_to_pdf(plannings: List[MarketPlanning], filepath: str):
+    """
+    Exporte plusieurs planifications vers un fichier PDF
+    
+    Args:
+        plannings: Liste des objets MarketPlanning à exporter
+        filepath: Chemin du fichier PDF de sortie
+    """
+    doc, styles = setup_pdf_document(filepath)
+    story = []
+    
+    # Titre
+    title = Paragraph("Rapport de Planification des Marchés", styles['Title'])
+    story.append(title)
+    story.append(Spacer(1, 0.5*cm))
+    
+    # Date de génération
+    date_paragraph = Paragraph(
+        f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
+        styles['NormalRight']
+    )
+    story.append(date_paragraph)
+    story.append(Spacer(1, 1*cm))
+    
+    # Statistiques
+    total_plannings = len(plannings)
+    total_budget = sum(p.estimated_budget for p in plannings if p.estimated_budget)
+    
+    stats_data = [
+        ["Statistique", "Valeur"],
+        ["Nombre de planifications", str(total_plannings)],
+        ["Budget total estimatif", f"{total_budget:,.2f} MAD"],
+        ["Validées", str(len([p for p in plannings if p.status.value == "validee"]))],
+        ["Programmées", str(len([p for p in plannings if p.status.value == "programmee"]))],
+        ["En préparation", str(len([p for p in plannings if p.status.value == "en_preparation"]))],
+    ]
+    
+    stats_table = Table(stats_data, colWidths=[6*cm, 6*cm])
+    stats_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    
+    story.append(stats_table)
+    story.append(Spacer(1, 1*cm))
+    
+    # Liste des planifications
+    if plannings:
+        subtitle = Paragraph("Liste des Planifications", styles['Subtitle'])
+        story.append(subtitle)
+        story.append(Spacer(1, 0.3*cm))
+        
+        planning_data = [["Numéro", "Intitulé", "Budget", "Statut", "Priorité", "Date lancement"]]
+        
+        for planning in plannings:
+            planning_data.append([
+                planning.planning_number,
+                planning.title[:40] + "..." if len(planning.title) > 40 else planning.title,
+                f"{planning.estimated_budget:,.2f} MAD" if planning.estimated_budget else "N/A",
+                planning.status.value if planning.status else "N/A",
+                planning.priority.value if planning.priority else "N/A",
+                planning.launch_date.strftime("%d/%m/%Y") if planning.launch_date else "N/A"
+            ])
+        
+        planning_table = Table(planning_data, colWidths=[2.5*cm, 5*cm, 2.5*cm, 2*cm, 1.5*cm, 2*cm])
+        planning_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ]))
+        
+        story.append(planning_table)
+    
+    # Pied de page
+    story.append(Spacer(1, 2*cm))
+    footer = Paragraph(
+        f"Document généré automatiquement le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
+        styles['NormalRight']
+    )
+    story.append(footer)
+    
+    # Générer le PDF
+    doc.build(story)
+
+
 def export_dashboard_to_pdf(stats: dict, filepath: str):
     """
     Exporte les statistiques du dashboard vers un fichier PDF

@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 
-{% block title %}Détail Planification - {{ planning['planning_number'] }}{% endblock %}
+{% block title %}Détail Planification - {{ planning.planning_number }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Planification {{ planning['planning_number'] }}</h1>
+    <h1 class="h2">Planification {{ planning.planning_number }}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="/planification" class="btn btn-sm btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> Retour à la liste
         </a>
-        <a href="/planification/{{ planning['id'] }}/edit" class="btn btn-sm btn-primary me-2">
+        <a href="/planification/{{ planning.id }}/edit" class="btn btn-sm btn-primary me-2">
             <i class="bi bi-pencil"></i> Modifier
         </a>
-        {% if planning['status'] == 'validee' %}
-        <a href="/preparation/new?planning_id={{ planning['id'] }}" class="btn btn-sm btn-success me-2">
+        {% if planning.status.value == 'validee' %}
+        <a href="/preparation/new?planning_id={{ planning.id }}" class="btn btn-sm btn-success me-2">
             <i class="bi bi-file-earmark-plus"></i> Créer préparation
         </a>
         {% endif %}
-        <button type="button" class="btn btn-sm btn-outline-danger" data-planning-id="{{ planning['id'] }}" onclick="deletePlanning(this)">
+        <button type="button" class="btn btn-sm btn-outline-danger" data-planning-id="{{ planning.id }}" onclick="deletePlanning(this)">
             <i class="bi bi-trash"></i> Supprimer
         </button>
     </div>
@@ -34,27 +34,27 @@
                 <table class="table table-borderless">
                     <tr>
                         <td width="30%"><strong>Numéro de planification:</strong></td>
-                        <td>{{ planning['planning_number'] }}</td>
+                        <td>{{ planning.planning_number }}</td>
                     </tr>
                     <tr>
                         <td><strong>Exercice/Année:</strong></td>
-                        <td>{{ planning['fiscal_year'] }}</td>
+                        <td>{{ planning.fiscal_year }}</td>
                     </tr>
                     <tr>
                         <td><strong>Intitulé:</strong></td>
-                        <td>{{ planning['title'] }}</td>
+                        <td>{{ planning.title }}</td>
                     </tr>
                     <tr>
                         <td><strong>Description:</strong></td>
-                        <td>{{ planning['description'] or '-' }}</td>
+                        <td>{{ planning.description or '-' }}</td>
                     </tr>
                     <tr>
                         <td><strong>Statut:</strong></td>
-                        <td><span class="badge" id="statusBadge">{{ planning['status'] }}</span></td>
+                        <td><span class="badge" id="statusBadge">{{ planning.status.value }}</span></td>
                     </tr>
                     <tr>
                         <td><strong>Priorité:</strong></td>
-                        <td><span class="badge" id="priorityBadge">{{ planning['priority'] }}</span></td>
+                        <td><span class="badge" id="priorityBadge">{{ planning.priority.value }}</span></td>
                     </tr>
                 </table>
             </div>
@@ -92,11 +92,11 @@
                 <table class="table table-borderless">
                     <tr>
                         <td width="40%"><strong>Type de projet:</strong></td>
-                        <td><span class="badge bg-secondary" id="projectTypeBadge">{{ planning['project_type'] }}</span></td>
+                        <td><span class="badge bg-secondary" id="projectTypeBadge">{{ planning.project_type.value if planning.project_type else '-' }}</span></td>
                     </tr>
                     <tr>
                         <td><strong>Type de procédure:</strong></td>
-                        <td><span class="badge bg-info" id="procedureTypeBadge">{{ planning['procedure_type'] }}</span></td>
+                        <td><span class="badge bg-info" id="procedureTypeBadge">{{ planning.procedure_type.value if planning.procedure_type else '-' }}</span></td>
                     </tr>
                 </table>
             </div>
@@ -111,11 +111,11 @@
                 <table class="table table-borderless">
                     <tr>
                         <td width="40%"><strong>Budget estimatif:</strong></td>
-                        <td><strong id="budgetAmount">{{ planning['estimated_budget'] }}</strong></td>
+                        <td><strong id="budgetAmount">{{ planning.estimated_budget }}</strong></td>
                     </tr>
                     <tr>
                         <td><strong>Source de financement:</strong></td>
-                        <td>{{ planning['funding_source'] or '-' }}</td>
+                        <td>{{ planning.funding_source or '-' }}</td>
                     </tr>
                 </table>
             </div>
@@ -134,7 +134,7 @@
                 <table class="table table-borderless">
                     <tr>
                         <td width="40%"><strong>Service:</strong></td>
-                        <td>{{ planning['requesting_service_name'] or '-' }}</td>
+                        <td>{{ planning.requesting_service_name or '-' }}</td>
                     </tr>
                 </table>
             </div>
@@ -149,7 +149,7 @@
                 <table class="table table-borderless">
                     <tr>
                         <td width="40%"><strong>Responsable:</strong></td>
-                        <td>{{ planning['responsible_name'] or '-' }}</td>
+                        <td>{{ planning.responsible_name or '-' }}</td>
                     </tr>
                 </table>
             </div>
@@ -167,44 +167,44 @@
             <div class="col-md-4 mb-3">
                 <div class="p-3 border rounded">
                     <small class="text-muted">Lancement</small>
-                    <div class="fw-bold">{{ planning['launch_date'][:10] if planning['launch_date'] else '-' }}</div>
+                    <div class="fw-bold">{{ planning.launch_date.strftime('%d/%m/%Y') if planning.launch_date else '-' }}</div>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
                 <div class="p-3 border rounded">
                     <small class="text-muted">Ouverture des plis</small>
-                    <div class="fw-bold">{{ planning['bid_opening_date'][:10] if planning['bid_opening_date'] else '-' }}</div>
+                    <div class="fw-bold">{{ planning.bid_opening_date.strftime('%d/%m/%Y') if planning.bid_opening_date else '-' }}</div>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
                 <div class="p-3 border rounded">
                     <small class="text-muted">Attribution</small>
-                    <div class="fw-bold">{{ planning['attribution_date'][:10] if planning['attribution_date'] else '-' }}</div>
+                    <div class="fw-bold">{{ planning.attribution_date.strftime('%d/%m/%Y') if planning.attribution_date else '-' }}</div>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
                 <div class="p-3 border rounded">
                     <small class="text-muted">Notification</small>
-                    <div class="fw-bold">{{ planning['notification_date'][:10] if planning['notification_date'] else '-' }}</div>
+                    <div class="fw-bold">{{ planning.notification_date.strftime('%d/%m/%Y') if planning.notification_date else '-' }}</div>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
                 <div class="p-3 border rounded">
                     <small class="text-muted">Ordre de service</small>
-                    <div class="fw-bold">{{ planning['service_order_date'][:10] if planning['service_order_date'] else '-' }}</div>
+                    <div class="fw-bold">{{ planning.service_order_date.strftime('%d/%m/%Y') if planning.service_order_date else '-' }}</div>
                 </div>
             </div>
             <div class="col-md-4 mb-3"></div>
             <div class="col-md-4 mb-3">
                 <div class="p-3 border rounded bg-light">
                     <small class="text-muted">Début d'exécution</small>
-                    <div class="fw-bold text-success">{{ planning['start_date'][:10] if planning['start_date'] else '-' }}</div>
+                    <div class="fw-bold text-success">{{ planning.start_date.strftime('%d/%m/%Y') if planning.start_date else '-' }}</div>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
                 <div class="p-3 border rounded bg-light">
                     <small class="text-muted">Fin d'exécution</small>
-                    <div class="fw-bold text-danger">{{ planning['end_date'][:10] if planning['end_date'] else '-' }}</div>
+                    <div class="fw-bold text-danger">{{ planning.end_date.strftime('%d/%m/%Y') if planning.end_date else '-' }}</div>
                 </div>
             </div>
         </div>
@@ -217,7 +217,7 @@
         <h5 class="mb-0"><i class="bi bi-chat-text"></i> Observations</h5>
     </div>
     <div class="card-body">
-        <p>{{ planning['observations'] or 'Aucune observation' }}</p>
+        <p>{{ planning.observations or 'Aucune observation' }}</p>
     </div>
 </div>
 
@@ -243,18 +243,18 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for doc in planning['documents'] %}
+                    {% for doc in planning.documents %}
                     <tr>
-                        <td>{{ doc['name'] }}</td>
-                        <td>{{ doc['file_name'] }}</td>
-                        <td>{{ doc['file_size'] }}</td>
-                        <td>{{ doc['uploaded_at'][:16] if doc['uploaded_at'] else '-' }}</td>
+                        <td>{{ doc.name }}</td>
+                        <td>{{ doc.file_name }}</td>
+                        <td>{{ doc.file_size }}</td>
+                        <td>{{ doc.uploaded_at.strftime('%d/%m/%Y %H:%M') if doc.uploaded_at else '-' }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="/api/market-planning/documents/{{ doc['id'] }}/download" class="btn btn-outline-primary" title="Télécharger">
+                                <a href="/api/market-planning/documents/{{ doc.id }}/download" class="btn btn-outline-primary" title="Télécharger">
                                     <i class="bi bi-download"></i>
                                 </a>
-                                <button type="button" class="btn btn-outline-danger" data-doc-id="{{ doc['id'] }}" onclick="deleteDocument(this)" title="Supprimer">
+                                <button type="button" class="btn btn-outline-danger" data-doc-id="{{ doc.id }}" onclick="deleteDocument(this)" title="Supprimer">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
