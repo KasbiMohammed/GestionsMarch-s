@@ -17,6 +17,63 @@ from app.auth.permissions import can_create_market, can_edit_market, can_delete_
 router = APIRouter()
 
 
+@router.get("/available-plannings", response_model=List[dict])
+async def get_available_plannings(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Récupère les planifications disponibles pour créer un marché
+    (planifications sans marché associé)
+    
+    Args:
+        current_user: Utilisateur actuel
+        db: Session de base de données
+        
+    Returns:
+        Liste des planifications disponibles
+    """
+    from app.models.market_planning import MarketPlanning
+    
+    # Récupérer les IDs des planifications qui ont déjà un marché
+    planning_ids_with_market = db.query(Market.planning_id).filter(
+        Market.planning_id.isnot(None)
+    ).all()
+    planning_ids_with_market = [p[0] for p in planning_ids_with_market]
+    
+    # Récupérer les planifications sans marché
+    available_plannings = db.query(MarketPlanning).filter(
+        ~MarketPlanning.id.in_(planning_ids_with_market) if planning_ids_with_market else True
+    ).order_by(MarketPlanning.created_at.desc()).all()
+    
+    return [
+        {
+            "id": p.id,
+            "planning_number": p.planning_number,
+            "fiscal_year": p.fiscal_year,
+            "title": p.title,
+            "description": p.description,
+            "project_type": p.project_type.value if p.project_type else None,
+            "procedure_type": p.procedure_type.value if p.procedure_type else None,
+            "estimated_budget": p.estimated_budget,
+            "funding_source": p.funding_source,
+            "requesting_service_name": p.requesting_service_name,
+            "responsible_name": p.responsible_name,
+            "priority": p.priority.value if p.priority else None,
+            "status": p.status.value if p.status else None,
+            "launch_date": p.launch_date.isoformat() if p.launch_date else None,
+            "bid_opening_date": p.bid_opening_date.isoformat() if p.bid_opening_date else None,
+            "attribution_date": p.attribution_date.isoformat() if p.attribution_date else None,
+            "notification_date": p.notification_date.isoformat() if p.notification_date else None,
+            "service_order_date": p.service_order_date.isoformat() if p.service_order_date else None,
+            "start_date": p.start_date.isoformat() if p.start_date else None,
+            "end_date": p.end_date.isoformat() if p.end_date else None,
+            "observations": p.observations
+        }
+        for p in available_plannings
+    ]
+
+
 @router.get("/", response_model=MarketListResponse)
 async def get_markets(
     skip: int = Query(0, ge=0),
@@ -293,3 +350,101 @@ async def add_company(
     db.refresh(db_company)
     
     return db_company
+
+
+@router.post("/from-planning/{planning_id}", response_model=MarketResponse, status_code=status.HTTP_201_CREATED)
+async def create_market_from_planning(
+    planning_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Crée un marché à partir d'une planification
+    
+    Args:
+        planning_id: ID de la planification
+        current_user: Utilisateur actuel
+        db: Session de base de données
+        
+    Returns:
+        Marché créé
+        
+    Raises:
+        HTTPException: Si la planification n'existe pas ou a déjà un marché
+    """
+    from app.models.market_planning import MarketPlanning
+    from app.models.market import MarketType, ProcurementMethod
+    
+    # Vérifier si la planification existe
+    planning = db.query(MarketPlanning).filter(MarketPlanning.id == planning_id).first()
+    if not planning:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Planning not found"
+        )
+    
+    # Vérifier si la planification a déjà un marché
+    existing_market = db.query(Market).filter(Market.planning_id == planning_id).first()
+    if existing_market:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A market already exists for this planning"
+        )
+    
+    # Mapper les types de procédure de planification vers les types de marché
+    procedure_mapping = {
+        "bon_commande": ProcurementMethod.BON_COMMANDE,
+        "marche_simplifie": ProcurementMethod.MARCHE_SIMPLIFIE,
+        "ao_ouvert": ProcurementMethod.APPEL_OFFRES_OUVERT,
+        "ao_restreint": ProcurementMethod.APPEL_OFFRES_RESTREINT,
+        "consultation": ProcurementMethod.CONSULTATION,
+        "procedure_negociee": ProcurementMethod.MARCHE_NEGOCIE
+    }
+    
+    # Mapper les types de projet de planification vers les types de marché
+    project_mapping = {
+        "travaux": MarketType.TRAVAUX,
+        "fournitures": MarketType.FOURNITURES,
+        "services": MarketType.SERVICES,
+        "prestations_intellectuelles": MarketType.ETUDES
+    }
+    
+    procurement_method = procedure_mapping.get(planning.procedure_type.value) if planning.procedure_type else ProcurementMethod.APPEL_OFFRES_OUVERT
+    market_type = project_mapping.get(planning.project_type.value) if planning.project_type else MarketType.SERVICES
+    
+    # Générer un numéro de marché
+    import uuid
+    market_number = f"M-{planning.fiscal_year}-{uuid.uuid4().hex[:8].upper()}"
+    
+    # Créer le marché avec les données de la planification
+    from datetime import datetime
+    
+    market = Market(
+        market_number=market_number,
+        object=planning.title or planning.description or "",
+        master_of_work="Commune",  # Valeur par défaut, peut être personnalisé
+        market_type=market_type,
+        procurement_method=procurement_method,
+        estimated_amount=planning.estimated_budget or 0.0,
+        budget=planning.estimated_budget or 0.0,
+        responsible_service=planning.requesting_service_name,
+        follow_up_responsible=planning.responsible_name,
+        # Utiliser les dates de planification seulement si elles sont définies
+        publication_date=planning.launch_date if planning.launch_date else None,
+        opening_date=planning.bid_opening_date if planning.bid_opening_date else None,
+        attribution_date=planning.attribution_date if planning.attribution_date else None,
+        notification_date=planning.notification_date if planning.notification_date else None,
+        start_date=planning.start_date if planning.start_date else None,
+        expected_end_date=planning.end_date if planning.end_date else None,
+        observations=planning.observations,
+        planning_id=planning_id,
+        created_by=current_user.id,
+        modified_by=current_user.id,
+        status=MarketStatus.PLANIFIE
+    )
+    
+    db.add(market)
+    db.commit()
+    db.refresh(market)
+    
+    return market

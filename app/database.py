@@ -36,5 +36,5 @@ def get_db():
 
 def init_db():
     """Initialise la base de données avec toutes les tables"""
-    from app.models import user, market, stage, document, history
+    from app.models import user, market, stage, document, history, market_planning
     Base.metadata.create_all(bind=engine)

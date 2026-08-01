@@ -89,6 +89,9 @@ class Market(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
+    # Relation with MarketPlanning
+    planning_id = Column(Integer, ForeignKey("market_plannings.id"), nullable=True)
+    
     # Relations
     created_by_user = relationship("User", foreign_keys=[created_by], back_populates="created_markets")
     modified_by_user = relationship("User", foreign_keys=[modified_by], back_populates="modified_markets")
@@ -97,6 +100,7 @@ class Market(Base):
     documents = relationship("Document", back_populates="market", cascade="all, delete-orphan")
     histories = relationship("History", back_populates="market", cascade="all, delete-orphan")
     service_need = relationship("ServiceNeed", back_populates="realized_market", uselist=False)
+    planning = relationship("MarketPlanning", back_populates="market", uselist=False)
 
     # Relations ajoutées (manquaient et provoquaient des erreurs de mapping SQLAlchemy)
     alerts = relationship("Alert", back_populates="market", cascade="all, delete-orphan")

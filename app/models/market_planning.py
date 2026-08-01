@@ -53,7 +53,11 @@ class MarketPlanningStatus(str, Enum):
 class MarketPlanning(Base):
     """Planification d'un marché public"""
     __tablename__ = "market_plannings"
-
+    markets = relationship(
+        "Market",
+        back_populates="planning",
+        foreign_keys="Market.planning_id"
+    )
     id = Column(Integer, primary_key=True, index=True)
     planning_number = Column(String(50), unique=True, nullable=False, index=True)
     fiscal_year = Column(Integer, nullable=False, index=True)
@@ -102,6 +106,7 @@ class MarketPlanning(Base):
         cascade="all, delete-orphan",
     )
     preparation = relationship("MarketPreparation", back_populates="planning", uselist=False, cascade="all, delete-orphan")
+    market = relationship("Market", back_populates="planning", uselist=False)
 
     def __repr__(self):
         return f"<MarketPlanning(id={self.id}, number='{self.planning_number}')>"
