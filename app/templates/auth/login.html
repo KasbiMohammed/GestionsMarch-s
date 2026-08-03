@@ -2,203 +2,665 @@
 
 {% block title %}Connexion - Gestion des Marchés Publics{% endblock %}
 
+{% block extra_css %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --login-primary: #1e3a5f;
+    --login-accent: #d4a843;
+    --login-glass-bg: rgba(255, 255, 255, 0.07);
+    --login-glass-border: rgba(255, 255, 255, 0.12);
+  }
+
+  .login-page-body {
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0f1f3d 0%, #1a3a5c 50%, #0d2137 100%);
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* Canvas réseau de particules */
+  #networkCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Formes flottantes */
+  .geo-shape {
+    position: fixed;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(212,168,67,0.12) 0%, transparent 70%);
+    animation: float 20s infinite ease-in-out;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .geo-shape:nth-child(1) { width: 400px; height: 400px; top: -100px; left: -100px; animation-delay: 0s; }
+  .geo-shape:nth-child(2) { width: 300px; height: 300px; bottom: -50px; right: -50px; animation-delay: -5s; background: radial-gradient(circle, rgba(45,90,135,0.18) 0%, transparent 70%); }
+  .geo-shape:nth-child(3) { width: 200px; height: 200px; top: 50%; left: 10%; animation-delay: -10s; background: radial-gradient(circle, rgba(212,168,67,0.08) 0%, transparent 70%); }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(30px, -30px) scale(1.05); }
+    50% { transform: translate(-20px, 20px) scale(0.95); }
+    75% { transform: translate(20px, 10px) scale(1.02); }
+  }
+
+  /* Carte glassmorphism 3D */
+  .glass-card {
+    background: var(--login-glass-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--login-glass-border);
+    border-radius: 24px;
+    padding: 3rem 2.5rem;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    transform-style: preserve-3d;
+    transition: transform 0.1s ease-out, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    z-index: 10;
+  }
+
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(212,168,67,0.07) 0%, transparent 50%);
+    pointer-events: none;
+    transition: background 0.3s ease;
+  }
+
+  .glass-card:hover {
+    box-shadow: 0 16px 48px rgba(0,0,0,0.45), 0 0 40px rgba(212,168,67,0.06);
+  }
+
+  /* Logo animé */
+  .logo-ring {
+    width: 80px; height: 80px;
+    margin: 0 auto 1.5rem;
+    position: relative;
+  }
+  .logo-ring svg {
+    width: 100%; height: 100%;
+    animation: rotate-slow 30s linear infinite;
+  }
+  @keyframes rotate-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .logo-icon {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    animation: pulse-gold 3s ease-in-out infinite;
+  }
+  @keyframes pulse-gold {
+    0%, 100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  }
+
+  /* Typing */
+  .typing-text {
+    color: rgba(255,255,255,0.55);
+    font-size: 0.875rem;
+    font-weight: 300;
+    min-height: 1.5em;
+    text-align: center;
+  }
+  .typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--login-accent);
+    margin-left: 2px;
+    animation: blink 1s step-end infinite;
+    vertical-align: text-bottom;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Champs */
+  .field-group { margin-bottom: 1.5rem; position: relative; z-index: 2; }
+  .field-group label {
+    display: block;
+    color: rgba(255,255,255,0.65);
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .input-wrap { position: relative; display: flex; align-items: center; }
+  .input-wrap i.bi {
+    position: absolute;
+    left: 1rem;
+    color: rgba(255,255,255,0.35);
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    z-index: 3;
+  }
+  .input-wrap input {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 2.75rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+  .input-wrap input::placeholder { color: rgba(255,255,255,0.25); }
+  .input-wrap input:focus {
+    background: rgba(255,255,255,0.08);
+    border-color: var(--login-accent);
+    box-shadow: 0 0 0 3px rgba(212,168,67,0.1), 0 0 20px rgba(212,168,67,0.05);
+  }
+  .input-wrap input:focus + i.bi,
+  .input-wrap input:not(:placeholder-shown) + i.bi { color: var(--login-accent); }
+
+  .toggle-pwd {
+    position: absolute;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.35);
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: color 0.3s ease;
+    z-index: 3;
+  }
+  .toggle-pwd:hover { color: var(--login-accent); }
+
+  /* Checkbox */
+  .remember-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    z-index: 2;
+    position: relative;
+  }
+  .custom-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.875rem;
+    user-select: none;
+  }
+  .custom-checkbox input { display: none; }
+  .check-box {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+  .custom-checkbox input:checked + .check-box {
+    background: var(--login-accent);
+    border-color: var(--login-accent);
+  }
+  .custom-checkbox input:checked + .check-box::after {
+    content: '✓';
+    color: #0f1f3d;
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+  .forgot-link {
+    color: var(--login-accent);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    position: relative;
+  }
+  .forgot-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0;
+    width: 0; height: 1px;
+    background: var(--login-accent);
+    transition: width 0.3s ease;
+  }
+  .forgot-link:hover::after { width: 100%; }
+
+  /* Bouton */
+  .submit-btn {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--login-accent) 0%, #c49a3a 100%);
+    border: none;
+    border-radius: 12px;
+    color: #0f1f3d;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(212,168,67,0.3);
+  }
+  .submit-btn:active { transform: translateY(0); }
+  .submit-btn .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    transform: scale(0);
+    animation: ripple-anim 0.6s linear;
+    pointer-events: none;
+  }
+  @keyframes ripple-anim {
+    to { transform: scale(4); opacity: 0; }
+  }
+  .submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Erreur */
+  .error-msg {
+    background: rgba(220, 53, 69, 0.12);
+    border: 1px solid rgba(220, 53, 69, 0.25);
+    color: #ff8a8a;
+    padding: 0.875rem 1rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    animation: shake 0.5s ease;
+    z-index: 2;
+    position: relative;
+  }
+  .error-msg.show { display: flex; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  /* Footer */
+  .login-footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 2;
+    position: relative;
+  }
+  .login-footer p {
+    color: rgba(255,255,255,0.35);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  /* Spinner */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(15, 31, 61, 0.3);
+    border-top-color: #0f1f3d;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+  }
+  .spinner.show { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Transition de page */
+  .page-transition {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--login-primary);
+    z-index: 9999;
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+    pointer-events: none;
+  }
+  .page-transition.active {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+
+  @media (max-width: 480px) {
+    .glass-card { padding: 2rem 1.5rem; }
+  }
+</style>
+{% endblock %}
+
 {% block login_content %}
-<div class="row justify-content-center align-items-center">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow">
-            <div class="card-body p-5">
-                <div class="text-center mb-4">
-                    <i class="bi bi-building" style="font-size: 3rem; color: var(--primary-color);" aria-hidden="true"></i>
-                    <h3 class="mt-3">Gestion des Marchés Publics</h3>
-                    <p class="text-muted">Communes Territoriales Marocaines</p>
-                </div>
+<!-- Formes flottantes -->
+<div class="geo-shape"></div>
+<div class="geo-shape"></div>
+<div class="geo-shape"></div>
 
-                <!-- Zone d'erreur globale -->
-                <div id="loginError" class="alert alert-danger d-none" role="alert"></div>
+<!-- Canvas réseau -->
+<canvas id="networkCanvas"></canvas>
 
-                <form id="loginForm" novalidate>
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Nom d'utilisateur</label>
-                        <div class="input-group has-validation">
-                            <span class="input-group-text">
-                                <i class="bi bi-person" aria-hidden="true"></i>
-                            </span>
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="username"
-                                name="username"
-                                autocomplete="username"
-                                autofocus
-                                required
-                                aria-describedby="usernameFeedback"
-                            >
-                            <div id="usernameFeedback" class="invalid-feedback">
-                                Veuillez saisir votre nom d'utilisateur.
-                            </div>
-                        </div>
-                    </div>
+<!-- Transition -->
+<div class="page-transition" id="pageTransition"></div>
 
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Mot de passe</label>
-                        <div class="input-group has-validation">
-                            <span class="input-group-text">
-                                <i class="bi bi-lock" aria-hidden="true"></i>
-                            </span>
-                            <input
-                                type="password"
-                                class="form-control"
-                                id="password"
-                                name="password"
-                                autocomplete="current-password"
-                                required
-                                aria-describedby="passwordFeedback"
-                            >
-                            <button
-                                type="button"
-                                class="btn btn-outline-secondary"
-                                id="togglePassword"
-                                title="Afficher le mot de passe"
-                                aria-label="Afficher le mot de passe"
-                            >
-                                <i class="bi bi-eye" aria-hidden="true" id="togglePasswordIcon"></i>
-                            </button>
-                            <div id="passwordFeedback" class="invalid-feedback">
-                                Veuillez saisir votre mot de passe.
-                            </div>
-                        </div>
-                    </div>
+<div class="login-page-body d-flex align-items-center justify-content-center">
+  <div class="glass-card" id="glassCard">
 
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="rememberMe">
-                        <label class="form-check-label" for="rememberMe">
-                            Se souvenir de moi
-                        </label>
-                    </div>
-
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-                            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                            <span id="submitBtnText">Se connecter</span>
-                        </button>
-                    </div>
-                </form>
-
-                <div class="text-center mt-4">
-                    <a href="#" class="text-decoration-none">Mot de passe oublié ?</a>
-                </div>
-
-                <div class="mt-4 pt-4 border-top">
-                    <p class="text-center text-muted small">
-                        Système de gestion des marchés publics conforme à la réglementation marocaine
-                    </p>
-                </div>
-            </div>
-        </div>
+    <div class="text-center mb-4">
+      <div class="logo-ring">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(212,168,67,0.3)" stroke-width="0.5" stroke-dasharray="4 4"/>
+          <circle cx="50" cy="50" r="35" fill="none" stroke="rgba(212,168,67,0.2)" stroke-width="0.5"/>
+          <circle cx="50" cy="50" r="25" fill="none" stroke="rgba(45,90,135,0.3)" stroke-width="0.5" stroke-dasharray="2 6"/>
+        </svg>
+        <div class="logo-icon">🏛️</div>
+      </div>
+      <h3 class="text-white fw-semibold mb-1">Gestion des Marchés Publics</h3>
+      <div class="typing-text">
+        <span id="typed"></span><span class="typing-cursor"></span>
+      </div>
     </div>
+
+    <div class="error-msg" id="loginError">
+      <span>⚠️</span>
+      <span id="errorText"></span>
+    </div>
+
+    <form id="loginForm" novalidate>
+      <div class="field-group">
+        <label>Nom d'utilisateur</label>
+        <div class="input-wrap">
+          <i class="bi bi-person"></i>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="Entrez votre identifiant"
+            autocomplete="username"
+            autofocus
+            required
+          >
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Mot de passe</label>
+        <div class="input-wrap">
+          <i class="bi bi-lock"></i>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          >
+          <button type="button" class="toggle-pwd" id="togglePassword" title="Afficher le mot de passe">
+            <i class="bi bi-eye" id="togglePasswordIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="remember-row">
+        <label class="custom-checkbox">
+          <input type="checkbox" id="rememberMe">
+          <span class="check-box"></span>
+          <span>Se souvenir de moi</span>
+        </label>
+        <a href="#" class="forgot-link">Mot de passe oublié ?</a>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">
+        <div class="spinner" id="btnSpinner"></div>
+        <span id="submitBtnText">Se connecter</span>
+        <i class="bi bi-arrow-right" id="btnArrow"></i>
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p>Système de gestion des marchés publics<br>conforme à la réglementation marocaine</p>
+    </div>
+
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function() {
-    'use strict';
+  'use strict';
 
-    const form = document.getElementById('loginForm');
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const rememberMeInput = document.getElementById('rememberMe');
-    const submitBtn = document.getElementById('submitBtn');
-    const submitBtnText = document.getElementById('submitBtnText');
-    const loginError = document.getElementById('loginError');
-    const togglePassword = document.getElementById('togglePassword');
-    const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+  // ── 1. RÉSEAU DE PARTICULES (Canvas) ──
+  const canvas = document.getElementById('networkCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
 
-    // ─────────────────────────────────────────
-    // Toggle affichage mot de passe
-    // ─────────────────────────────────────────
-    togglePassword.addEventListener('click', function() {
-        const isPassword = passwordInput.type === 'password';
-        passwordInput.type = isPassword ? 'text' : 'password';
-        togglePasswordIcon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
-        togglePassword.setAttribute('aria-label', isPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
-        togglePassword.setAttribute('title', isPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
-    });
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
 
-    // ─────────────────────────────────────────
-    // Soumission du formulaire
-    // ─────────────────────────────────────────
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        loginError.classList.add('d-none');
-        loginError.textContent = '';
-
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            return;
-        }
-
-        const username = usernameInput.value.trim();
-        const password = passwordInput.value;
-        const rememberMe = rememberMeInput.checked;
-
-        setLoading(true);
-
-        try {
-            const response = await fetch('/api/auth/login/json', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ username, password })
-            });
-
-            let data = {};
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                data = await response.json();
-            }
-
-            if (response.ok) {
-                // Stockage sécurisé du token
-                const maxAge = rememberMe ? 2592000 : 1800; // 30 jours ou 30 min
-                const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
-                document.cookie = 'access_token=' + encodeURIComponent(data.access_token) +
-                    '; path=/' +
-                    '; max-age=' + maxAge +
-                    '; SameSite=Lax' +
-                    secureFlag;
-
-                showNotification('Connexion réussie !', 'success');
-                window.location.href = '/dashboard';
-            } else {
-                const message = data.detail || data.message || 'Nom d\'utilisateur ou mot de passe incorrect.';
-                loginError.textContent = message;
-                loginError.classList.remove('d-none');
-                passwordInput.value = '';
-                passwordInput.focus();
-            }
-        } catch (error) {
-            console.error('Erreur réseau:', error);
-            loginError.textContent = 'Impossible de joindre le serveur. Veuillez réessayer.';
-            loginError.classList.remove('d-none');
-        } finally {
-            setLoading(false);
-        }
-    });
-
-    // ─────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────
-    function setLoading(isLoading) {
-        submitBtn.disabled = isLoading;
-        if (isLoading) {
-            submitBtnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Connexion...';
-        } else {
-            submitBtnText.textContent = 'Se connecter';
-        }
+  class Particle {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.vx = (Math.random() - 0.5) * 0.35;
+      this.vy = (Math.random() - 0.5) * 0.35;
+      this.size = Math.random() * 2 + 0.8;
+      this.opacity = Math.random() * 0.4 + 0.15;
     }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+      if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(212, 168, 67, ${this.opacity})`;
+      ctx.fill();
+    }
+  }
+
+  function initParticles() {
+    particles = [];
+    const count = Math.min(Math.floor(window.innerWidth * window.innerHeight / 18000), 70);
+    for (let i = 0; i < count; i++) particles.push(new Particle());
+  }
+  initParticles();
+
+  function drawConnections() {
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 140) {
+          const opacity = (1 - dist / 140) * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(212, 168, 67, ${opacity})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => { p.update(); p.draw(); });
+    drawConnections();
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  // ── 2. EFFET 3D TILT sur la carte ──
+  const card = document.getElementById('glassCard');
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const rx = (y - rect.height / 2) / 18;
+    const ry = (rect.width / 2 - x) / 18;
+    card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+    card.style.setProperty('--mouse-x', (x / rect.width * 100) + '%');
+    card.style.setProperty('--mouse-y', (y / rect.height * 100) + '%');
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
+  });
+
+  // ── 3. TYPING ANIMATION ──
+  const phrases = [
+    "Communes Territoriales Marocaines",
+    "Gestion transparente des marchés",
+    "Conformité réglementaire assurée"
+  ];
+  let pIdx = 0, cIdx = 0, deleting = false;
+  const typed = document.getElementById('typed');
+  function typeLoop() {
+    const cur = phrases[pIdx];
+    if (deleting) {
+      typed.textContent = cur.substring(0, cIdx - 1);
+      cIdx--;
+    } else {
+      typed.textContent = cur.substring(0, cIdx + 1);
+      cIdx++;
+    }
+    let speed = deleting ? 25 : 55;
+    if (!deleting && cIdx === cur.length) { speed = 2000; deleting = true; }
+    else if (deleting && cIdx === 0) { deleting = false; pIdx = (pIdx + 1) % phrases.length; speed = 400; }
+    setTimeout(typeLoop, speed);
+  }
+  setTimeout(typeLoop, 600);
+
+  // ── 4. TOGGLE MOT DE PASSE ──
+  const togglePwd = document.getElementById('togglePassword');
+  const pwdInput = document.getElementById('password');
+  const toggleIcon = document.getElementById('togglePasswordIcon');
+  togglePwd.addEventListener('click', () => {
+    const isPwd = pwdInput.type === 'password';
+    pwdInput.type = isPwd ? 'text' : 'password';
+    toggleIcon.className = isPwd ? 'bi bi-eye-slash' : 'bi bi-eye';
+    togglePwd.setAttribute('title', isPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+  });
+
+  // ── 5. RIPPLE EFFECT ──
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.left = (e.clientX - rect.left) + 'px';
+    ripple.style.top = (e.clientY - rect.top) + 'px';
+    this.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+  });
+
+  // ── 6. SOUMISSION RÉELLE (ta logique API) ──
+  const form = document.getElementById('loginForm');
+  const usernameInput = document.getElementById('username');
+  const loginError = document.getElementById('loginError');
+  const errorText = document.getElementById('errorText');
+  const btnSpinner = document.getElementById('btnSpinner');
+  const btnText = document.getElementById('submitBtnText');
+  const btnArrow = document.getElementById('btnArrow');
+  const pageTransition = document.getElementById('pageTransition');
+
+  function setLoading(loading) {
+    submitBtn.disabled = loading;
+    if (loading) {
+      btnSpinner.classList.add('show');
+      btnText.textContent = 'Connexion...';
+      btnArrow.style.display = 'none';
+    } else {
+      btnSpinner.classList.remove('show');
+      btnText.textContent = 'Se connecter';
+      btnArrow.style.display = 'inline';
+    }
+  }
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    loginError.classList.remove('show');
+    errorText.textContent = '';
+
+    if (!form.checkValidity()) {
+      form.classList.add('was-validated');
+      return;
+    }
+
+    const username = usernameInput.value.trim();
+    const password = pwdInput.value;
+    const rememberMe = document.getElementById('rememberMe').checked;
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/login/json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      });
+
+      let data = {};
+      const ct = response.headers.get('content-type');
+      if (ct && ct.includes('application/json')) data = await response.json();
+
+      if (response.ok) {
+        const maxAge = rememberMe ? 2592000 : 1800;
+        const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = 'access_token=' + encodeURIComponent(data.access_token) +
+          '; path=/; max-age=' + maxAge + '; SameSite=Lax' + secureFlag;
+
+        pageTransition.classList.add('active');
+        setTimeout(() => { window.location.href = '/dashboard'; }, 500);
+      } else {
+        const msg = data.detail || data.message || "Nom d'utilisateur ou mot de passe incorrect.";
+        errorText.textContent = msg;
+        loginError.classList.add('show');
+        pwdInput.value = '';
+        pwdInput.focus();
+      }
+    } catch (err) {
+      console.error('Erreur réseau:', err);
+      errorText.textContent = 'Impossible de joindre le serveur. Veuillez réessayer.';
+      loginError.classList.add('show');
+    } finally {
+      setLoading(false);
+    }
+  });
 })();
 </script>
 {% endblock %}

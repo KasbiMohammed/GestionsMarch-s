@@ -75,6 +75,26 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 templates = Jinja2Templates(directory="app/templates")
 
 # ─────────────────────────────────────────────
+# Filtres Jinja2 personnalisés
+# ─────────────────────────────────────────────
+def get_status_color(status):
+    """Retourne la couleur Bootstrap pour un statut de marché"""
+    colors = {
+        'en_preparation': 'info',
+        'en_cours': 'warning',
+        'termine': 'success',
+        'en_attente': 'secondary',
+        'en_retard': 'danger',
+        'annule': 'danger',
+        'suspendu': 'dark'
+    }
+    return colors.get(status, 'secondary')
+
+# Enregistrer comme filtre ET comme fonction globale
+templates.env.filters['getStatusColor'] = get_status_color
+templates.env.globals['getStatusColor'] = get_status_color
+
+# ─────────────────────────────────────────────
 # Helper d'authentification (factorisé)
 # ─────────────────────────────────────────────
 def get_current_user_or_none(request: Request, db: Session):
@@ -184,6 +204,7 @@ async def market_detail_page(request: Request, market_id: int, db: Session = Dep
         'credits': market.credits,
         'responsible_service': market.responsible_service,
         'follow_up_responsible': market.follow_up_responsible,
+        'launch_date': market.launch_date,
         'publication_date': market.publication_date,
         'opening_date': market.opening_date,
         'attribution_date': market.attribution_date,

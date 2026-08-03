@@ -29,7 +29,7 @@ class ProcurementMethod(str, enum.Enum):
 
 class MarketStatus(str, enum.Enum):
     """Statuts des marchés"""
-    PLANIFIE = "planifie"
+    EN_PREPARATION = "en_preparation"
     EN_COURS = "en_cours"
     TERMINE = "termine"
     EN_ATTENTE = "en_attente"
@@ -62,6 +62,7 @@ class Market(Base):
     follow_up_responsible = Column(String(200))
     
     # Dates importantes
+    launch_date = Column(DateTime)  # Date de lancement du marché
     publication_date = Column(DateTime)
     opening_date = Column(DateTime)
     attribution_date = Column(DateTime)
@@ -73,7 +74,7 @@ class Market(Base):
     actual_end_date = Column(DateTime)
     
     # Statut et progression
-    status = Column(Enum(MarketStatus), default=MarketStatus.PLANIFIE)
+    status = Column(Enum(MarketStatus), default=MarketStatus.EN_PREPARATION)
     progress_percentage = Column(Integer, default=0)
     
     # Entreprises

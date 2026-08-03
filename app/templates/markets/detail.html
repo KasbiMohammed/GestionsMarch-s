@@ -66,7 +66,7 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
-                    <span class="badge badge-status bg-{{ getStatusColor(market.status) }} fs-5">
+                    <span class="badge badge-status bg-{% if market.status == 'en_preparation' %}info{% elif market.status == 'en_cours' %}warning{% elif market.status == 'termine' %}success{% elif market.status == 'en_attente' %}secondary{% elif market.status == 'en_retard' %}danger{% elif market.status == 'annule' %}danger{% elif market.status == 'suspendu' %}dark{% else %}secondary{% endif %} fs-5">
                         {{ market.status.replace('_', ' ')|upper }}
                     </span>
                 </div>
@@ -120,6 +120,10 @@
             </div>
             <div class="card-body">
                 <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Date de lancement</label>
+                        <p class="mb-0">{{ market.launch_date.strftime('%d/%m/%Y') if market.launch_date else 'N/A' }}</p>
+                    </div>
                     <div class="col-6 mb-3">
                         <label class="text-muted small">Publication</label>
                         <p class="mb-0">{{ market.publication_date.strftime('%d/%m/%Y') if market.publication_date else 'N/A' }}</p>
@@ -505,6 +509,21 @@ function exportToPDF() {
 function editMarket() {
     // TODO: Implement edit functionality
     showNotification('Fonctionnalité de modification à implémenter', 'info');
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'brouillon': 'secondary',
+        'en_preparation': 'info',
+        'publie': 'primary',
+        'en_cours': 'warning',
+        'termine': 'success',
+        'annule': 'danger',
+        'suspendu': 'dark',
+        'planifie': 'info',
+        'draft': 'secondary'
+    };
+    return colors[status] || 'secondary';
 }
 
 // Load data on page load

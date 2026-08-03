@@ -46,12 +46,14 @@ class MarketPlanningBase(BaseModel):
     procedure_type: Optional[ProcedureType] = None
     estimated_budget: Optional[float] = Field(None, ge=0)
     funding_source: Optional[str] = Field(None, max_length=200)
+    master_of_work: Optional[str] = Field("Commune", max_length=200)
     requesting_service_id: Optional[int] = None
     requesting_service_name: Optional[str] = Field(None, max_length=200)
     responsible_id: Optional[int] = None
     responsible_name: Optional[str] = Field(None, max_length=200)
     priority: Optional[PlanningPriority] = None
     status: Optional[MarketPlanningStatus] = None
+    progress_percentage: Optional[int] = Field(0, ge=0, le=100)
     launch_date: Optional[datetime] = None
     bid_opening_date: Optional[datetime] = None
     attribution_date: Optional[datetime] = None
@@ -77,12 +79,14 @@ class MarketPlanningUpdate(BaseModel):
     procedure_type: Optional[ProcedureType] = None
     estimated_budget: Optional[float] = Field(None, ge=0)
     funding_source: Optional[str] = Field(None, max_length=200)
+    master_of_work: Optional[str] = Field(None, max_length=200)
     requesting_service_id: Optional[int] = None
     requesting_service_name: Optional[str] = Field(None, max_length=200)
     responsible_id: Optional[int] = None
     responsible_name: Optional[str] = Field(None, max_length=200)
     priority: Optional[PlanningPriority] = None
     status: Optional[MarketPlanningStatus] = None
+    progress_percentage: Optional[int] = Field(None, ge=0, le=100)
     launch_date: Optional[datetime] = None
     bid_opening_date: Optional[datetime] = None
     attribution_date: Optional[datetime] = None

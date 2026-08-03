@@ -70,6 +70,9 @@ class MarketPlanning(Base):
 
     estimated_budget = Column(Float, nullable=False, default=0.0)
     funding_source = Column(String(200), nullable=True)
+    
+    # Maître d'ouvrage
+    master_of_work = Column(String(200), nullable=True, default="Commune")
 
     requesting_service_id = Column(Integer, ForeignKey("services.id"), nullable=True)
     requesting_service_name = Column(String(200), nullable=True)
@@ -78,6 +81,9 @@ class MarketPlanning(Base):
 
     priority = Column(SQLEnum(PlanningPriority), default=PlanningPriority.MOYENNE)
     status = Column(SQLEnum(MarketPlanningStatus), default=MarketPlanningStatus.BROUILLON)
+    
+    # Progression de la planification
+    progress_percentage = Column(Integer, default=0)
 
     # Dates prévisionnelles
     launch_date = Column(DateTime, nullable=True)

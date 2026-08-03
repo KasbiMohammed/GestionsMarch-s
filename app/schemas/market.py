@@ -79,6 +79,7 @@ class MarketBase(BaseModel):
 class MarketCreate(MarketBase):
     """Schema pour la création de marché"""
     definitive_amount: Optional[float] = None
+    launch_date: Optional[datetime] = None
     publication_date: Optional[datetime] = None
     opening_date: Optional[datetime] = None
     attribution_date: Optional[datetime] = None
@@ -103,6 +104,7 @@ class MarketUpdate(BaseModel):
     credits: Optional[float] = None
     responsible_service: Optional[str] = None
     follow_up_responsible: Optional[str] = None
+    launch_date: Optional[datetime] = None
     publication_date: Optional[datetime] = None
     opening_date: Optional[datetime] = None
     attribution_date: Optional[datetime] = None
@@ -126,6 +128,7 @@ class MarketResponse(MarketBase):
     credits: Optional[float] = None
     responsible_service: Optional[str] = None
     follow_up_responsible: Optional[str] = None
+    launch_date: Optional[datetime] = None
     publication_date: Optional[datetime] = None
     opening_date: Optional[datetime] = None
     attribution_date: Optional[datetime] = None

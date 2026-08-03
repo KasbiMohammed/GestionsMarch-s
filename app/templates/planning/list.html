@@ -92,12 +92,13 @@
                         <table class="table table-hover" id="planningsTable">
                             <thead>
                                 <tr>
-                                    <th>Année</th>
-                                    <th>Service</th>
-                                    <th>Titre</th>
-                                    <th>Budget Total</th>
-                                    <th>Consommé</th>
+                                    <th>Numéro</th>
+                                    <th>Objet</th>
+                                    <th>Maître d'ouvrage</th>
+                                    <th>Type</th>
+                                    <th>Montant</th>
                                     <th>Statut</th>
+                                    <th>Progression</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -124,30 +125,65 @@
                 <form id="createForm">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Année</label>
-                            <input type="number" class="form-control" name="year" required>
+                            <label class="form-label">Numéro de planification</label>
+                            <input type="text" class="form-control" name="planning_number" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Service</label>
-                            <select class="form-select" name="service_id">
-                                <option value="">Sélectionner...</option>
-                                <option value="1">Service Marchés</option>
-                                <option value="2">Service Technique</option>
-                                <option value="3">Service Financier</option>
-                            </select>
+                            <label class="form-label">Exercice fiscal</label>
+                            <input type="number" class="form-control" name="fiscal_year" required>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Titre</label>
+                        <label class="form-label">Titre / Objet</label>
                         <input type="text" class="form-control" name="title" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Description</label>
                         <textarea class="form-control" name="description" rows="3"></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Budget Total (MAD)</label>
-                        <input type="number" class="form-control" name="total_budget" step="0.01">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Type de projet</label>
+                            <select class="form-select" name="project_type" required>
+                                <option value="">Sélectionner...</option>
+                                <option value="travaux">Travaux</option>
+                                <option value="fournitures">Fournitures</option>
+                                <option value="services">Services</option>
+                                <option value="prestations_intellectuelles">Prestations intellectuelles</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Type de procédure</label>
+                            <select class="form-select" name="procedure_type" required>
+                                <option value="">Sélectionner...</option>
+                                <option value="bon_commande">Bon de commande</option>
+                                <option value="marche_simplifie">Marché simplifié</option>
+                                <option value="ao_ouvert">Appel d'offres ouvert</option>
+                                <option value="ao_restreint">Appel d'offres restreint</option>
+                                <option value="consultation">Consultation</option>
+                                <option value="procedure_negociee">Procédure négociée</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Budget estimé (MAD)</label>
+                            <input type="number" class="form-control" name="estimated_budget" step="0.01" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Maître d'ouvrage</label>
+                            <input type="text" class="form-control" name="master_of_work" value="Commune">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Service demandeur</label>
+                            <input type="text" class="form-control" name="requesting_service_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Responsable</label>
+                            <input type="text" class="form-control" name="responsible_name">
+                        </div>
                     </div>
                 </form>
             </div>
@@ -200,11 +236,15 @@ let currentPlanningId = null;
 
 function loadPlannings() {
     // Appel API pour charger les planifications
-    fetch('/api/planning/')
+    fetch('/api/market-planning/')
         .then(response => response.json())
         .then(data => {
-            displayPlannings(data);
-            updateStatistics(data);
+            displayPlannings(data.items || data);
+            updateStatistics(data.items || data);
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des planifications:', error);
+            showNotification('Erreur lors du chargement des planifications', 'danger');
         });
 }
 
@@ -212,25 +252,39 @@ function displayPlannings(plannings) {
     const tbody = document.getElementById('planningsBody');
     tbody.innerHTML = '';
     
+    if (plannings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Aucune planification trouvée</td></tr>';
+        return;
+    }
+    
     plannings.forEach(planning => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${planning.year}</td>
-            <td>${planning.service_name || '-'}</td>
-            <td>${planning.title}</td>
-            <td>${formatCurrency(planning.total_budget)}</td>
-            <td>${formatCurrency(planning.consumed_budget)}</td>
-            <td><span class="badge bg-${getStatusColor(planning.status)}">${planning.status}</span></td>
+            <td><strong>${planning.planning_number}</strong></td>
+            <td>${planning.title.substring(0, 40)}${planning.title.length > 40 ? '...' : ''}</td>
+            <td>${planning.master_of_work || '-'}</td>
+            <td><span class="badge bg-secondary">${planning.project_type || '-'}</span></td>
+            <td>${formatCurrency(planning.estimated_budget)}</td>
+            <td><span class="badge badge-status bg-${getStatusColor(planning.status)}">${planning.status.replace('_', ' ')}</span></td>
             <td>
-                <button class="btn btn-sm btn-info" onclick="viewNeeds(${planning.id})">
-                    <i class="fas fa-list"></i>
-                </button>
-                <button class="btn btn-sm btn-primary" onclick="editPlanning(${planning.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-success" onclick="submitPlanning(${planning.id})" ${planning.status !== 'brouillon' ? 'disabled' : ''}>
-                    <i class="fas fa-paper-plane"></i>
-                </button>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar" role="progressbar" style="width: ${planning.progress_percentage || 0}%;">
+                        ${planning.progress_percentage || 0}%
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="btn-group">
+                    <a href="/planning/${planning.id}" class="btn btn-sm btn-outline-primary btn-action">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <button class="btn btn-sm btn-outline-secondary btn-action" onclick="editPlanning(${planning.id})">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="deletePlanning(${planning.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
             </td>
         `;
         tbody.appendChild(row);
@@ -238,15 +292,14 @@ function displayPlannings(plannings) {
 }
 
 function updateStatistics(plannings) {
-    const totalBudget = plannings.reduce((sum, p) => sum + (p.total_budget || 0), 0);
-    const consumedBudget = plannings.reduce((sum, p) => sum + (p.consumed_budget || 0), 0);
-    const totalNeeds = plannings.reduce((sum, p) => sum + (p.needs_count || 0), 0);
-    const realizedNeeds = plannings.reduce((sum, p) => sum + (p.realized_needs_count || 0), 0);
+    const totalBudget = plannings.reduce((sum, p) => sum + (p.estimated_budget || 0), 0);
+    const totalPlannings = plannings.length;
+    const avgProgress = totalPlannings > 0 ? plannings.reduce((sum, p) => sum + (p.progress_percentage || 0), 0) / totalPlannings : 0;
     
     document.getElementById('totalBudget').textContent = formatCurrency(totalBudget);
-    document.getElementById('consumedBudget').textContent = formatCurrency(consumedBudget);
-    document.getElementById('totalNeeds').textContent = totalNeeds;
-    document.getElementById('realizationRate').textContent = totalNeeds > 0 ? ((realizedNeeds / totalNeeds) * 100).toFixed(1) + '%' : '0%';
+    document.getElementById('consumedBudget').textContent = formatCurrency(totalBudget * (avgProgress / 100));
+    document.getElementById('totalNeeds').textContent = totalPlannings;
+    document.getElementById('realizationRate').textContent = avgProgress.toFixed(1) + '%';
 }
 
 function showCreateModal() {
@@ -258,15 +311,37 @@ function createPlanning() {
     const form = document.getElementById('createForm');
     const formData = new FormData(form);
     
-    fetch('/api/planning/', {
+    const planningData = {
+        planning_number: formData.get('planning_number'),
+        fiscal_year: parseInt(formData.get('fiscal_year')),
+        title: formData.get('title'),
+        description: formData.get('description'),
+        project_type: formData.get('project_type'),
+        procedure_type: formData.get('procedure_type'),
+        estimated_budget: parseFloat(formData.get('estimated_budget')) || 0,
+        master_of_work: formData.get('master_of_work') || 'Commune',
+        requesting_service_name: formData.get('requesting_service_name'),
+        responsible_name: formData.get('responsible_name'),
+        status: 'brouillon',
+        progress_percentage: 0
+    };
+    
+    fetch('/api/market-planning/', {
         method: 'POST',
-        body: formData
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(planningData)
     })
     .then(response => response.json())
     .then(data => {
         bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
         loadPlannings();
         showNotification('Planification créée avec succès', 'success');
+    })
+    .catch(error => {
+        console.error('Erreur lors de la création:', error);
+        showNotification('Erreur lors de la création de la planification', 'danger');
     });
 }
 
